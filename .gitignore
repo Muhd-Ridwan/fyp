@@ -1,3 +1,18 @@
+# Python
+backend/venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+
+# Environment files (NEVER commit secrets)
+.env
+backend/.env
+frontend/.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
 **/.env
 **/.env/*
 !**/.env.example
