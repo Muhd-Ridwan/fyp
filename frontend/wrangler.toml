@@ -1,3 +1,8 @@
 name = "fyp"
 compatibility_date = "2026-06-14"
 pages_build_output_dir = "./dist"
+
+[vars]
+VITE_API_BASE_URL = "https://api.dev-r.org"
+VITE_COGNITO_CLIENT_ID = "3ra8tfinlaloe78c64gs0sq45b"
+VITE_COGNITO_USER_POOL_ID = "ap-southeast-2_QAvlYuqrZ"
