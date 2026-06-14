@@ -1,0 +1,32 @@
+name: Deploy Backend to AWS EB
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Zip backend for deployment
+        run: |
+          cd backend
+          zip -r ../deploy.zip . -x ".git/*" ".elasticbeanstalk/*"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY_ACCESS_KEY }}
+          application_name: fyp-backend-prod
+          environment_name: Fyp-backend-prod-env
+          version_label: ${{ github.sha }}
+          region: ap-southeast-2
+          deployment_package: deploy.zip
+          wait_for_environment_recovery: 300
