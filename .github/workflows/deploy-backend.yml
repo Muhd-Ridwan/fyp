@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - 'backend/**'
+      - "backend/**"
 
 jobs:
   deploy:
@@ -26,7 +26,7 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_KEY_ACCESS_KEY }}
           application_name: fyp-backend-prod
           environment_name: Fyp-backend-prod-env
-          version_label: ${{ github.sha }}
+          version_label: ${{ github.sha }}-${{ github.run_attempt }}
           region: ap-southeast-2
           deployment_package: deploy.zip
           wait_for_environment_recovery: 300
