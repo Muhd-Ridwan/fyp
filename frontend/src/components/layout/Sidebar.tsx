@@ -1,0 +1,209 @@
+/**
+ * Application sidebar
+ * Mobile (<md)
+ * Desktop (>=md)
+ */
+
+import {
+  CloudSnow,
+  Folder,
+  MessageSquare,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import type { EmployeeProfile } from "../../types";
+import DeptBadge from "../ui/DeptBadge";
+
+interface SidebarProps {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+  currentView: "documents" | "ai";
+  onViewChange: (view: "documents" | "ai") => void;
+  profile: EmployeeProfile;
+  onSignOut: () => void;
+}
+
+interface NavItemProps {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}
+
+function NavItem({ icon, label, active, collapsed, onClick }: NavItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      title={collapsed ? label : undefined}
+      aria-label={label}
+      className={`w-full flex items-center gap-2.5 rounded-lg text-sm transition-colors text-left ${collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2"} ${active ? "bg-indigo-50 text-indigo-700 font-medium" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}
+    >
+      <span className="flex-shrink-0">{icon}</span>
+      {!collapsed && <span>{label}</span>}
+    </button>
+  );
+}
+
+function getUserInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+export default function Sidebar({
+  collapsed,
+  onToggleCollapse,
+  mobileOpen,
+  onMobileClose,
+  currentView,
+  onViewChange,
+  profile,
+  onSignOut,
+}: SidebarProps) {
+  function handleViewChange(view: "documents" | "ai") {
+    onViewChange(view);
+    onMobileClose();
+  }
+
+  return (
+    <>
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar Panel */}
+      <aside
+        className={[
+          "fixed inser-y-0 left-0 z-50 w-48 flex flex-col",
+          "bg-white border-r border-slate-200",
+          "transition-transform duration-200",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "md:static md:translate-x-0 md:flex-shrink-0",
+          collapsed ? "md:w-14" : "md:w-48",
+        ].join(" ")}
+      >
+        {/* Brand + toggle */}
+        <div
+          className={`flex items-center h-14 border-b border-slate-100 flex-shrink-0 ${collapsed ? "justify-center px-3" : "justify-between px-4"}`}
+        >
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                <CloudSnow
+                  size={14}
+                  className="text-white"
+                  aria-hidden="true"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900 loading-tight truncate">
+                  DocuVault AI
+                </p>
+                <p className="text-xs text-slate-400">Document Management</p>
+              </div>
+            </div>
+          )}
+          {collapsed && (
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex-items-center justify-center">
+              <CloudSnow size={14} className="text-white" aria-hidden="true" />
+            </div>
+          )}
+
+          {/* Desktop Collapse Toggle */}
+          <button
+            onClick={onToggleCollapse}
+            title={collapsed ? "Expand sidebar" : "Collapse sidbar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden md:flex w-7 h-7 items-center justify-center rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
+          >
+            {collapsed ? (
+              <ChevronRight size={15} aria-hidden="true" />
+            ) : (
+              <ChevronLeft size={15} aria-hidden="true" />
+            )}
+          </button>
+        </div>
+
+        {/* Dept Badge */}
+        <div
+          className={`border-b border-slate-100 ${collapsed ? "px-2 py-3 flex justify-center" : "px-4 py-3"}`}
+        >
+          <DeptBadge
+            department={profile.department}
+            size={collapsed ? "sm" : "md"}
+          />
+          {!collapsed && (
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              You can only access your department's documents.
+            </p>
+          )}
+        </div>
+
+        {/* Nav Items */}
+        <nav
+          className={`flex-1 py-3 space-y-0.5 ${collapsed ? "px-2" : "px-3"}`}
+        >
+          <NavItem
+            icon={<Folder size={16} />}
+            label="Documents"
+            active={currentView === "documents"}
+            collapsed={collapsed}
+            onClick={() => handleViewChange("documents")}
+          />
+          <NavItem
+            icon={<MessageSquare size={16} />}
+            label="AI Assistant"
+            active={currentView === "ai"}
+            collapsed={collapsed}
+            onClick={() => handleViewChange("ai")}
+          />
+        </nav>
+
+        {/* User info + Sign out */}
+        <div
+          className={`border-t border-slate-100 py-3 flex-shrink-0 ${collapsed ? "px-2" : "px-4"}`}
+        >
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-xs font-semibold text-indigo-700">
+                  {getUserInitials(profile.name)}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 truncate">
+                  {profile.name}
+                </p>
+                <p className="text-xs text-slate-400 truncate">
+                  {profile.email}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={onSignOut}
+            title={collapsed ? "Sign Out" : undefined}
+            aria-label="Sign out"
+            className={`flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors rounded-lg py-1.5 ${collapsed ? "justify-center w-full px-2" : "px-1"}`}
+          >
+            <LogOut size={15} aria-hidden="true" />
+            {!collapsed && <span>Sign Out</span>}
+          </button>
+        </div>
+      </aside>
+    </>
+  );
+}

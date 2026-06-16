@@ -3,22 +3,17 @@
  * profile (including department) fetched from backedn
  */
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useEffect, useState, type ReactNode } from "react";
 import {
   login as cognitoLogin,
   logout as cognitoLogout,
   getCurrentSession,
   type AuthTokens,
 } from "./authClient";
-import { fetchCurrentEmployee, type EmployeeProfile } from "../api";
+import { fetchCurrentEmployee } from "../api";
+import type { EmployeeProfile } from "../types";
 
-interface AuthContextValue {
+export interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   tokens: AuthTokens | null;
@@ -27,7 +22,10 @@ interface AuthContextValue {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+// eslint-disable-next-line react-refresh/only-export-components
+export const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined,
+);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -74,12 +72,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used witihn AuthProvider");
-  }
-  return context;
 }
