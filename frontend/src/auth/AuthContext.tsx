@@ -41,7 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const employeeProfile = await fetchCurrentEmployee(restored.idToken);
           setTokens(restored);
           setProfile(employeeProfile);
-        } catch {
+        } catch (err) {
+          console.warn("Session restore failed:", err);
           cognitoLogout();
         }
       }

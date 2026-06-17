@@ -77,6 +77,7 @@ export default function AIAssistantPage({
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
+      console.error(err);
       const aiMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",

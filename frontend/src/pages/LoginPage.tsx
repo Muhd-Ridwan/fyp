@@ -20,6 +20,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
+      console.error(err);
       if (err instanceof Error && err.message === "NEW_PASSWORD_REQUIRED") {
         setError("This account requires new password");
       } else if (err instanceof Error) {

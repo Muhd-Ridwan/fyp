@@ -117,13 +117,21 @@ export default function DocumentsPage({
 
   async function handleUpload(files: File[]) {
     setUploading(true);
+    const id = toast.loading(
+      files.length > 1 ? `Uploading ${files.length} files...` : "Uploading file...",
+    );
     try {
       for (const file of files) {
         await uploadDocument(idToken, file, currentFolderId ?? undefined);
       }
       await loadData();
-    } catch {
-      setError("Upload failed. Try Again");
+      toast.success(
+        files.length > 1 ? `${files.length} files uploaded` : "File uploaded",
+        { id },
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Upload failed. Try again", { id });
     } finally {
       setUploading(false);
     }
@@ -136,8 +144,10 @@ export default function DocumentsPage({
     try {
       await createFolder(idToken, name, currentFolderId ?? undefined);
       await loadData();
-    } catch {
-      setError("Failed to create folder. Try Again.");
+      toast.success("Folder created");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create folder. Try again");
     }
   }
 
@@ -154,8 +164,10 @@ export default function DocumentsPage({
         await renameDocument(idToken, target.item.file_id, newName);
       }
       await loadData();
-    } catch {
-      setError("Rename failed. Try Again");
+      toast.success("Renamed successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error("Rename failed. Try again");
     }
   }
 
@@ -183,7 +195,8 @@ export default function DocumentsPage({
         target.type === "folder" ? "Folder deleted" : "File deleted",
         { id },
       );
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error("Delete failed. Try again.", { id });
     }
   }
@@ -194,8 +207,9 @@ export default function DocumentsPage({
     try {
       const { url } = await getDownloadUrl(idToken, doc.file_id);
       window.open(url, "_blank", "noopener,noreferrer");
-    } catch {
-      setError("Download failed. Try Again");
+    } catch (err) {
+      console.error(err);
+      toast.error("Download failed. Try again");
     }
   }
 
