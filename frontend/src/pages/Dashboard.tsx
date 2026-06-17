@@ -8,12 +8,7 @@ import { useAuth } from "../auth/useAuth";
 import AppShell from "../components/layout/AppShell";
 import DocumentsPage from "./DocumentsPage";
 import AIAssistantPage from "./AIAssistantPage";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+import type { Message } from "../types";
 
 export default function Dashboard() {
   const { profile, tokens, logout } = useAuth();

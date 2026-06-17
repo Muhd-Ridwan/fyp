@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, Loader2 } from "lucide-react";
-import type { EmployeeProfile } from "../types";
+import type { EmployeeProfile, Message } from "../types";
 import DeptBadge from "../components/ui/DeptBadge";
 import { askQuestion } from "../api/chatApi";
 
@@ -18,13 +18,7 @@ interface AIAssistantPageProps {
   onConsumePrompt?: () => void;
 }
 
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
-
-const SUGGESSTIONS = [
+const SUGGESTIONS = [
   "Summarise any documents",
   "List key points from the reports",
 ];
@@ -51,6 +45,7 @@ export default function AIAssistantPage({
       void handleSend(initialPrompt);
       onConsumePrompt?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);
 
   async function handleSend(textOverride?: string) {
@@ -142,7 +137,7 @@ export default function AIAssistantPage({
               Once RAG pipeline is connected, can answer the questions
             </p>
             <div className="flex flex-col gap-2 w-full max-w-xs">
-              {SUGGESSTIONS.map((suggestion) => (
+              {SUGGESTIONS.map((suggestion) => (
                 <button
                   key={suggestion}
                   onClick={() => setInput(suggestion)}

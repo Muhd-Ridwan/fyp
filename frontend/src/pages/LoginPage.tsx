@@ -2,7 +2,7 @@
  * Login page
  */
 
-import { type SubmitEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useAuth } from "../auth/useAuth";
 
 export default function LoginPage() {
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);

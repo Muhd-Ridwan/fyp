@@ -40,6 +40,12 @@ export interface UploadResponse {
   content_type: string;
 }
 
+export interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface DownloadResponse {
   file_id: string;
   filename: string;

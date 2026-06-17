@@ -41,11 +41,7 @@ interface BreadcrumbEntry {
   folderName: string;
 }
 
-type RenameTarget =
-  | { type: "folder"; item: Folder }
-  | { type: "file"; item: Document };
-
-type DeleteTarget =
+type ActionTarget =
   | { type: "folder"; item: Folder }
   | { type: "file"; item: Document };
 
@@ -60,8 +56,8 @@ export default function DocumentsPage({
   const [uploading, setUploading] = useState(false);
   const [folderStack, setFolderStack] = useState<BreadcrumbEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [renameTarget, setRenameTarget] = useState<ActionTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ActionTarget | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
 
@@ -115,18 +111,18 @@ export default function DocumentsPage({
 
   // UPLOAD
 
-  async function handleUpload(files: File[]) {
+  async function handleUpload(selectedFiles: File[]) {
     setUploading(true);
     const id = toast.loading(
-      files.length > 1 ? `Uploading ${files.length} files...` : "Uploading file...",
+      selectedFiles.length > 1 ? `Uploading ${selectedFiles.length} files...` : "Uploading file...",
     );
     try {
-      for (const file of files) {
+      for (const file of selectedFiles) {
         await uploadDocument(idToken, file, currentFolderId ?? undefined);
       }
       await loadData();
       toast.success(
-        files.length > 1 ? `${files.length} files uploaded` : "File uploaded",
+        selectedFiles.length > 1 ? `${selectedFiles.length} files uploaded` : "File uploaded",
         { id },
       );
     } catch (err) {
@@ -317,7 +313,7 @@ export default function DocumentsPage({
 
         {/* Content List */}
         <div className="bg-white rounded-xl border border-slate-200">
-          <div className="px-4 py-3 border-b border-slate-100 flex fitems-center justify-between">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <span className="text-sm font-medium text-slate-700">
               Folders &amp; files
             </span>
