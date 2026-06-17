@@ -6,10 +6,16 @@ import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles, Loader2 } from "lucide-react";
 import type { EmployeeProfile } from "../types";
 import DeptBadge from "../components/ui/DeptBadge";
+import { askQuestion } from "../api/chatApi";
 
 interface AIAssistantPageProps {
   profile: EmployeeProfile;
   idToken: string;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  onClearChat: () => void;
+  initialPrompt?: string;
+  onConsumePrompt?: () => void;
 }
 
 interface Message {
@@ -23,8 +29,15 @@ const SUGGESSTIONS = [
   "List key points from the reports",
 ];
 
-export default function AIAssistantPage({ profile }: AIAssistantPageProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+export default function AIAssistantPage({
+  profile,
+  idToken,
+  messages,
+  setMessages,
+  onClearChat,
+  initialPrompt,
+  onConsumePrompt,
+}: AIAssistantPageProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -33,8 +46,15 @@ export default function AIAssistantPage({ profile }: AIAssistantPageProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  async function handleSend() {
-    const text = input.trim();
+  useEffect(() => {
+    if (initialPrompt) {
+      void handleSend(initialPrompt);
+      onConsumePrompt?.();
+    }
+  }, [initialPrompt]);
+
+  async function handleSend(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
     if (!text || loading) return;
 
     const userMessage: Message = {
@@ -47,19 +67,28 @@ export default function AIAssistantPage({ profile }: AIAssistantPageProps) {
     setInput("");
     setLoading(true);
 
-    // PLACEHOLDER - Later will replace with real RAG call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const aiMessage: Message = {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content:
-        "The RAG pipeline is not yet connected." +
-        "I will search your department's doc and respond with grounded, " +
-        "cited answers based on the actual content of your uploaded files.",
-    };
-    setMessages((prev) => [...prev, aiMessage]);
-    setLoading(false);
+    // RAG PIPELINE
+    try {
+      const data = await askQuestion(idToken, text);
+      const aiMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.answer,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
+      const aiMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again.",
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -77,10 +106,18 @@ export default function AIAssistantPage({ profile }: AIAssistantPageProps) {
               <span className="text-xs text-slate-400">documents only</span>
             </div>
           </div>
+          {messages.length > 0 && (
+            <button
+              onClick={onClearChat}
+              className="text-xs text-slate-400 hover:text-red-500 transition-colors mr-2"
+            >
+              Clear Chat
+            </button>
+          )}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             <span className="text-xs text-amber-700 font-medium">
-              Step 4 - RAG Pipeline
+              RAG Powered
             </span>
           </div>
         </div>

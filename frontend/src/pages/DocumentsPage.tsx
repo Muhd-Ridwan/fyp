@@ -3,7 +3,13 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { FolderPlus, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import {
+  FolderPlus,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Send,
+} from "lucide-react";
 import type { Document, Folder, EmployeeProfile } from "../types";
 import {
   listDocuments,
@@ -22,10 +28,12 @@ import ContentList from "../components/documents/ContentList";
 import UploadZone from "../components/documents/UploadZone";
 import RenameModal from "../components/documents/RenameModal";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import { toast } from "sonner";
 
 interface DocumentsPageProps {
   profile: EmployeeProfile;
   idToken: string;
+  onAskAI?: (prompt: string) => void;
 }
 
 interface BreadcrumbEntry {
@@ -44,6 +52,7 @@ type DeleteTarget =
 export default function DocumentsPage({
   profile,
   idToken,
+  onAskAI,
 }: DocumentsPageProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<Document[]>([]);
@@ -54,6 +63,7 @@ export default function DocumentsPage({
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   // Derived
   const currentFolderId = folderStack.at(-1)?.folderId ?? null;
@@ -73,7 +83,8 @@ export default function DocumentsPage({
       ]);
       setFolders(foldersData.folders);
       setFiles(filesData.files);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setError("Failed to load doc. Try again");
     } finally {
       setLoading(false);
@@ -104,10 +115,12 @@ export default function DocumentsPage({
 
   // UPLOAD
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: File[]) {
     setUploading(true);
     try {
-      await uploadDocument(idToken, file, currentFolderId ?? undefined);
+      for (const file of files) {
+        await uploadDocument(idToken, file, currentFolderId ?? undefined);
+      }
       await loadData();
     } catch {
       setError("Upload failed. Try Again");
@@ -121,7 +134,7 @@ export default function DocumentsPage({
   async function handleCreateFolder(name: string) {
     setCreateFolderOpen(false);
     try {
-      await createFolder(idToken, name);
+      await createFolder(idToken, name, currentFolderId ?? undefined);
       await loadData();
     } catch {
       setError("Failed to create folder. Try Again.");
@@ -152,6 +165,9 @@ export default function DocumentsPage({
     if (!deleteTarget) return;
     const target = deleteTarget;
     setDeleteTarget(null);
+    const id = toast.loading(
+      target.type === "folder" ? "Deleting folder..." : "Deleting file...",
+    );
     try {
       if (target.type === "folder") {
         await deleteFolder(idToken, target.item.folder_id);
@@ -163,8 +179,12 @@ export default function DocumentsPage({
         await deleteDocument(idToken, target.item.file_id);
       }
       await loadData();
+      toast.success(
+        target.type === "folder" ? "Folder deleted" : "File deleted",
+        { id },
+      );
     } catch {
-      setError("Delete failed. Try again.");
+      toast.error("Delete failed. Try again.", { id });
     }
   }
 
@@ -183,7 +203,7 @@ export default function DocumentsPage({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6 max-w-4xl">
+      <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
         {/* PAGE HEADERS */}
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -230,6 +250,34 @@ export default function DocumentsPage({
             <span className="hidden sm:inline">New Folder</span>
           </button>
         </div>
+        {onAskAI && (
+          <div className="flex gap-2 mb-4">
+            <input
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && aiPrompt.trim()) {
+                  onAskAI(aiPrompt.trim());
+                  setAiPrompt("");
+                }
+              }}
+              placeholder="Ask AI about your documents..."
+              className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            <button
+              onClick={() => {
+                if (aiPrompt.trim()) {
+                  onAskAI(aiPrompt.trim());
+                  setAiPrompt("");
+                }
+              }}
+              disabled={!aiPrompt.trim()}
+              className="px-3 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors"
+            >
+              <Send size={15} />
+            </button>
+          </div>
+        )}
         {/* Error Banner */}
         {error && (
           <div className="flex items-center gap-2.5 px-4 py-3 mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700">
@@ -254,7 +302,7 @@ export default function DocumentsPage({
         </div>
 
         {/* Content List */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200">
           <div className="px-4 py-3 border-b border-slate-100 flex fitems-center justify-between">
             <span className="text-sm font-medium text-slate-700">
               Folders &amp; files

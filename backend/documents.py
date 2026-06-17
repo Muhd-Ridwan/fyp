@@ -10,6 +10,8 @@ Upload flow:
 
 import os
 import uuid
+import io
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from pydantic import BaseModel
@@ -17,8 +19,10 @@ from pydantic import BaseModel
 import dynamodb_client
 import s3_client
 from dependencies import get_current_employee
+from rag import index_document, delete_document_vectors
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+logger = logging.getLogger(__name__)
 
 class RenameDocumentRequest(BaseModel):
     name: str
@@ -51,7 +55,8 @@ async def upload_document(
     content_type = file.content_type or "application/octet-stream"
 
     # Upload bytes to S3
-    s3_client.upload_file_by_key(file.file, s3_key, content_type)
+    file_bytes = await file.read()
+    s3_client.upload_file_by_key(io.BytesIO(file_bytes), s3_key, content_type)
 
     # Write metadata to DynamoDB
     document = dynamodb_client.create_document(
@@ -64,6 +69,11 @@ async def upload_document(
         content_type=content_type,
         folder_id=folder_id,
     )
+
+    try:
+        index_document(file_bytes, display_name, file_id, department)
+    except Exception as e:
+        logger.error("RAG indexing failed for %s (%s): %s", file_id, display_name, e, exc_info=True)
 
     return document
     
@@ -153,7 +163,8 @@ def delete_document(
     document = dynamodb_client.get_document(department, file_id)
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
-    
+      
+    delete_document_vectors(file_id, department)
     s3_client.delete_file_by_key(document["s3_key"])
     dynamodb_client.delete_document(department, file_id)
 

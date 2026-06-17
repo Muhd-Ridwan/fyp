@@ -2,6 +2,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { useAuth } from "./auth/useAuth";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import { Toaster } from "sonner";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -20,6 +21,7 @@ function AppRouter() {
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster position="top-right" richColors />
       <AppRouter />
     </AuthProvider>
   );

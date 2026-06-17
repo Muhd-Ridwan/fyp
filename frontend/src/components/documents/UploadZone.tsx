@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
 
 interface UploadZoneProps {
-  onUpload: (file: File) => void;
+  onUpload: (files: File[]) => void;
   uploading: boolean;
 }
 
@@ -29,8 +29,8 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(file: File) {
-    if (!uploading) onUpload(file);
+  function handleFiles(files: File[]) {
+    if (!uploading) onUpload(files);
   }
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -46,8 +46,8 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) handleFiles(files);
   }
 
   return (
@@ -65,8 +65,8 @@ export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
         accept={ACCEPTED_EXTENSIONS.join(",")}
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
+          const files = Array.from(e.target.files ?? []);
+          if (files.length) handleFiles(files);
           e.target.value = "";
         }}
       />

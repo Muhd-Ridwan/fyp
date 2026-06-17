@@ -97,18 +97,21 @@ def delete_folder(
         4. Delete folder record itself
     """
     department = employee["department"]
-    all_folder_ids = [folder_id] + dynamodb_client.get_all_subfolder_ids(
-        department, folder_id
-    )
+    try:
+        all_folder_ids = [folder_id] + dynamodb_client.get_all_subfolder_ids(
+            department, folder_id
+        )
 
-    for fid in all_folder_ids:
-        files = dynamodb_client.get_documents_by_department(department, folder_id=fid)
-        for file in files:
-            s3_client.delete_file_by_key(file["s3_key"])
-            dynamodb_client.delete_document(department, file["file_id"])
-    
-    for fid in reversed(all_folder_ids):
-        dynamodb_client.delete_folder(department, fid)
+        for fid in all_folder_ids:
+            files = dynamodb_client.get_documents_by_department(department, folder_id=fid)
+            for file in files:
+                s3_client.delete_file_by_key(file["s3_key"])
+                dynamodb_client.delete_document(department, file["file_id"])
+        
+        for fid in reversed(all_folder_ids):
+            dynamodb_client.delete_folder(department, fid)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     return {
         "folder_id": folder_id,
