@@ -1,14 +1,16 @@
-import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { AuthProvider } from "./auth/AuthContext";
+import { useAuth } from "./auth/useAuth";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import { Toaster } from "sonner";
 
-function AppContent() {
-  const { isLoading, isAuthenticated } = useAuth();
+function AppRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
-        Loading...
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -19,7 +21,8 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <Toaster position="top-right" richColors />
+      <AppRouter />
     </AuthProvider>
   );
 }

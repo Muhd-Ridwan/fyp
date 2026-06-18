@@ -2,14 +2,8 @@
  * Calls to the FYP Backend
  */
 
+import type { EmployeeProfile } from "./types";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
-
-export interface EmployeeProfile {
-  email: string;
-  name: string;
-  department: string;
-  role: string;
-}
 
 /**
  * Calls GET /me on the backend, sending the Cognito ID token as a

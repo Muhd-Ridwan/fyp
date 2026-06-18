@@ -2,8 +2,8 @@
  * Login page
  */
 
-import { type SubmitEvent, useState } from "react";
-import { useAuth } from "../auth/AuthContext";
+import { useState, type FormEvent } from "react";
+import { useAuth } from "../auth/useAuth";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
@@ -20,6 +20,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
+      console.error(err);
       if (err instanceof Error && err.message === "NEW_PASSWORD_REQUIRED") {
         setError("This account requires new password");
       } else if (err instanceof Error) {

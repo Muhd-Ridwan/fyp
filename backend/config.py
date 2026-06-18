@@ -17,6 +17,20 @@ AWS_REGION = os.getenv("AWS_REGION", "ap-southeast-2")
 COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID", "")
 COGNITO_APP_CLIENT_ID = os.getenv("COGNITO_APP_CLIENT_ID", "")
 DYNAMODB_EMPLOYEES_TABLE = os.getenv("DYNAMODB_EMPLOYEES_TABLE", "Employees")
+DYNAMODB_FOLDERS_TABLE = os.getenv("DYNAMODB_FOLDERS_TABLE", "Folders")
+DYNAMODB_DOCUMENTS_TABLE = os.getenv("DYNAMODB_DOCUMENTS_TABLE", "Documents")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "")
+
+# RESEND API
+RESEND_API_KEY= os.getenv("RESEND_API_KEY", "")
+
+# PINECONE
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "fyp-index")
+
+# BEDROCK MODEL IDs
+BEDROCK_EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+BEDROCK_GENERATION_MODEL_ID = "au.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 ALLOWED_ORIGINS = [
     origin.strip()
@@ -24,7 +38,7 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID:
+if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID or not S3_BUCKET_NAME or not PINECONE_API_KEY or not RESEND_API_KEY:
     raise RuntimeError(
-        "Cognito user pool id and cognito app client id must be set"
+        "Cognito user pool id, cognito app client id, S3 bucket name, Pinecone API, Resend API key must be set"
     )

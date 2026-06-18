@@ -3,41 +3,54 @@
  * employee's department (from the backend's /me response).
  */
 
-import { useAuth } from "../auth/AuthContext";
-
-const DASHBOARD_TITLES: Record<string, string> = {
-  HR: "HR Dashboard",
-  Finance: "Finance Dashboard",
-};
+import { useState } from "react";
+import { useAuth } from "../auth/useAuth";
+import AppShell from "../components/layout/AppShell";
+import DocumentsPage from "./DocumentsPage";
+import AIAssistantPage from "./AIAssistantPage";
+import type { Message } from "../types";
 
 export default function Dashboard() {
-  const { profile, logout } = useAuth();
+  const { profile, tokens, logout } = useAuth();
+  const [currentView, setCurrentView] = useState<"documents" | "ai">(
+    "documents",
+  );
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [initialPrompt, setInitialPrompt] = useState("");
 
-  if (!profile) {
+  function handleAskAI(prompt: string) {
+    setInitialPrompt(prompt);
+    setCurrentView("ai");
+  }
+
+  if (!profile || !tokens) {
     return null;
   }
 
-  const title =
-    DASHBOARD_TITLES[profile.department] ?? `${profile.department} Dashboard`;
-
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-          <button
-            onClick={logout}
-            className="text-sm font-medium text-slate-500 hover:text-slate-700"
-          >
-            Sign out
-          </button>
-        </div>
-
-        <p className="text-sm text-slate-600">
-          Logged in as <span className="font-medium">{profile.name}</span> (
-          {profile.email}) — role: {profile.role}
-        </p>
-      </div>
-    </div>
+    <AppShell
+      profile={profile}
+      onSignOut={logout}
+      currentView={currentView}
+      onViewChange={setCurrentView}
+    >
+      {currentView === "documents" ? (
+        <DocumentsPage
+          profile={profile}
+          idToken={tokens.idToken}
+          onAskAI={handleAskAI}
+        />
+      ) : (
+        <AIAssistantPage
+          profile={profile}
+          idToken={tokens.idToken}
+          messages={messages}
+          setMessages={setMessages}
+          onClearChat={() => setMessages([])}
+          initialPrompt={initialPrompt}
+          onConsumePrompt={() => setInitialPrompt("")}
+        />
+      )}
+    </AppShell>
   );
 }
