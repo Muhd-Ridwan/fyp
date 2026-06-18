@@ -208,7 +208,7 @@ def set_employee_status(email: str, status: str) -> None:
         Key={"email": email},
         UpdateExpression="SET #s = :status",
         ExpressionAttributeNames={"#s": "status"},
-        ExpressionAttributeValues={":status" status},
+        ExpressionAttributeValues={":status": status},
     )
 
 def update_employee_onboarding(email: str, personal_email: str, nric_last4_hash: str) -> None:
@@ -226,7 +226,7 @@ def update_employee_reset_token(email:str, token: str, expiry: int) -> None:
     _employees_table.update_item(
         Key={"email": email},
         UpdateExpression="SET reset_token = :t, reset_token_expiry = :e",
-        ExpressionAttributeValues={":t", token, ":e": expiry},
+        ExpressionAttributeValues={":t": token, ":e": expiry},
     )
 
 def clear_employee_reset_token(email: str) -> None:
