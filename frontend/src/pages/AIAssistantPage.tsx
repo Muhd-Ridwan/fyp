@@ -203,7 +203,7 @@ export default function AIAssistantPage({
             className="flex-1 resize-none text-sm px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend}
             disabled={!input.trim() || loading}
             aria-label="Send message"
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-shrink-0"
