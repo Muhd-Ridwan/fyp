@@ -110,7 +110,7 @@ def index_document(file_bytes: bytes, display_name: str, file_id: str, departmen
                 "text": chunk,
             },
         })
-    for batch_start in range(i, len(vectors), 100):
+    for batch_start in range(0, len(vectors), 100):
         _index.upsert(vectors=vectors[batch_start:batch_start + 100])
 
 def delete_document_vectors(file_id: str, department: str) -> None:
@@ -119,7 +119,7 @@ def delete_document_vectors(file_id: str, department: str) -> None:
     except NotFoundError:
         logger.warning("No vectors found for file %s in dept %s - skipping", file_id, department)
 
-def query_documents(question: str, department: str, top_k: int = 5) -> list[dict]:
+def query_documents(question: str, department: str, top_k: int = 10) -> list[dict]:
     embedding = get_embedding(question)
     result = _index.query(
         vector=embedding,
@@ -129,9 +129,10 @@ def query_documents(question: str, department: str, top_k: int = 5) -> list[dict
     )
     return [
         {
-            "text": match["metadata"].get("text", ""),
-            "display_name": match["metadata"].get("display_name", ""),
-            "score": match["score"],
+            "text": match["metadata"]["text"],
+            "display_name": match["metadata"].get("display_name", "Unknown"),
+            "filename": match["metadata"].get("display_name", "Unknown"),
         }
         for match in result.get("matches", [])
+        if "text" in match.get("metadata", {})
     ]

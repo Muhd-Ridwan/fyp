@@ -8,4 +8,7 @@ export default defineConfig({
   define: {
     global: "globalThis",
   },
+  server: {
+    allowedHosts: ["fyp-test.dev-r.org"],
+  },
 });

@@ -182,3 +182,62 @@ def delete_document(department: str, file_id: str) -> None:
     _documents_table.delete_item(
         Key={"department": department, "file_id": file_id}
     )
+
+def get_all_employees() -> list[dict]:
+    response = _employees_table.scan()
+    return response.get("Items", [])
+
+def create_employee(email: str, name: str, department: str, role: str) -> None:
+    _employees_table.put_item(Item={
+        "email": email,
+        "name": name,
+        "department": department,
+        "role": role,
+        "status": "active",
+    })
+
+def update_employee_department(email: str, department: str) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET department = :dept",
+        ExpressionAttributeValues={":dept", department},
+    )
+
+def set_employee_status(email: str, status: str) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET #s = :status",
+        ExpressionAttributeNames={"#s": "status"},
+        ExpressionAttributeValues={":status" status},
+    )
+
+def update_employee_onboarding(email: str, personal_email: str, nric_last4_hash: str) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET personal_email = :pe, nric_last4_hash = :nh, onboarding_complete = :oc",
+        ExpressionAttributeValues={
+            ":pe": personal_email,
+            ":nh": nric_last4_hash,
+            ":oc": True,
+        },
+    )
+
+def update_employee_reset_token(email:str, token: str, expiry: int) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET reset_token = :t, reset_token_expiry = :e",
+        ExpressionAttributeValues={":t", token, ":e": expiry},
+    )
+
+def clear_employee_reset_token(email: str) -> None:
+    _employees_table.update_item(
+        Key={"email", email},
+        UpdateExpression="REMOVE reset_token, reset_token_expiry",
+    )
+
+def update_employee_profile(email: str, address: str, phone: str) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="SET address = :a, phone = :p",
+        ExpressionAttributeValues={":a": address, ":p": phone},
+    )

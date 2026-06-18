@@ -35,13 +35,15 @@ export default function AIAssistantPage({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const handledPromptRef = useRef("");
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    if (initialPrompt) {
+    if (initialPrompt && initialPrompt !== handledPromptRef.current) {
+      handledPromptRef.current = initialPrompt;
       void handleSend(initialPrompt);
       onConsumePrompt?.();
     }

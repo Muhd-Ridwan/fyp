@@ -21,6 +21,9 @@ DYNAMODB_FOLDERS_TABLE = os.getenv("DYNAMODB_FOLDERS_TABLE", "Folders")
 DYNAMODB_DOCUMENTS_TABLE = os.getenv("DYNAMODB_DOCUMENTS_TABLE", "Documents")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "")
 
+# RESEND API
+RESEND_API_KEY= os.getenv("RESEND_API_KEY", "")
+
 # PINECONE
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "fyp-index")
@@ -35,7 +38,7 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID or not S3_BUCKET_NAME or not PINECONE_API_KEY:
+if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID or not S3_BUCKET_NAME or not PINECONE_API_KEY or not RESEND_API_KEY:
     raise RuntimeError(
-        "Cognito user pool id and cognito app client id must be set and S3 bucket name must be set and Pinecone API key must be set"
+        "Cognito user pool id, cognito app client id, S3 bucket name, Pinecone API, Resend API key must be set"
     )
