@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Lock, Unlock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { Employee, RegisterEmployeePayload } from "../types";
 import {
@@ -10,7 +10,17 @@ import {
   unlockEmployee,
 } from "../api/adminApi";
 
-const ROLES = ["Employee", "Manager", "System Administrator"] as const;
+const ROLES = [
+  { value: "employee", label: "Employee" },
+  { value: "manager", label: "Manager" },
+  { value: "system_admin", label: "System Administrator" },
+] as const;
+
+const ROLE_LABELS: Record<string, string> = {
+  employee: "Employee",
+  manager: "Manager",
+  system_admin: "System Administrator",
+};
 
 function generateTempPassword(): string {
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -45,7 +55,7 @@ const EMPTY_FORM: RegisterEmployeePayload = {
   email: "",
   name: "",
   department: "",
-  role: "Employee",
+  role: "employee",
   personal_email: "",
   temp_password: "",
 };
@@ -114,7 +124,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
   }
 
   async function handleSaveDept(email: string) {
-    const trimmed = editDept.trim();
+    const trimmed = editDept.trim().toLowerCase();
     if (!trimmed) return;
     setPendingEmail(email);
     try {
@@ -252,8 +262,8 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
             >
               {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
+                <option key={r.value} value={r.value}>
+                  {r.label}
                 </option>
               ))}
             </select>
@@ -295,7 +305,9 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               />
               <button
                 type="button"
-                onClick={() => setField("temp_password", generateTempPassword())}
+                onClick={() =>
+                  setField("temp_password", generateTempPassword())
+                }
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Generate
@@ -315,7 +327,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
             <button
               type="submit"
               disabled={isRegistering || !form.temp_password}
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isRegistering ? "Registering..." : "Register Employee"}
             </button>
@@ -375,7 +387,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {employees.map((emp) => (
-                  <tr key={emp.email} className="hover:bg-slate-50">
+                  <tr key={emp.email} className="group hover:bg-slate-50">
                     <td className="px-6 py-3 font-medium text-slate-800">
                       {emp.name}
                     </td>
@@ -387,20 +399,20 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
                             type="text"
                             value={editDept}
                             onChange={(e) => setEditDept(e.target.value)}
-                            className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                            className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
                           />
                           <button
                             type="button"
                             onClick={() => handleSaveDept(emp.email)}
                             disabled={pendingEmail === emp.email}
-                            className="text-xs font-medium text-slate-700 hover:underline disabled:opacity-50"
+                            className="inline-flex items-center rounded-md border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
                           >
                             Save
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditingEmail(null)}
-                            className="text-xs text-slate-400 hover:text-slate-600"
+                            className="inline-flex items-center rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-50"
                           >
                             Cancel
                           </button>
@@ -410,16 +422,29 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
                           type="button"
                           onClick={() => {
                             setEditingEmail(emp.email);
-                            setEditDept(emp.department);
+                            setEditDept(
+                              emp.department.replace(/\b\w/g, (c) =>
+                                c.toUpperCase(),
+                              ),
+                            );
                           }}
-                          className="text-left text-slate-600 hover:underline"
+                          className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 -mx-2 text-left text-slate-600 hover:bg-slate-100 transition-colors"
                           title="Click to edit"
                         >
-                          {emp.department}
+                          {emp.department.replace(/\b\w/g, (c) =>
+                            c.toUpperCase(),
+                          )}
+                          <Pencil
+                            size={11}
+                            className="opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0"
+                            aria-hidden="true"
+                          />
                         </button>
                       )}
                     </td>
-                    <td className="px-6 py-3 text-slate-600">{emp.role}</td>
+                    <td className="px-6 py-3 text-slate-600">
+                      {ROLE_LABELS[emp.role] ?? emp.role}
+                    </td>
                     <td className="px-6 py-3">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -447,17 +472,23 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
                         type="button"
                         disabled={pendingEmail === emp.email}
                         onClick={() => handleToggleLock(emp)}
-                        className={`text-xs font-medium disabled:opacity-50 ${
+                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                           emp.status === "locked"
-                            ? "text-green-600 hover:underline"
-                            : "text-red-600 hover:underline"
+                            ? "border-green-200 text-green-700 hover:bg-green-50"
+                            : "border-red-200 text-red-600 hover:bg-red-50"
                         }`}
                       >
-                        {pendingEmail === emp.email
-                          ? "…"
-                          : emp.status === "locked"
-                            ? "Unlock"
-                            : "Lock"}
+                        {pendingEmail === emp.email ? (
+                          "…"
+                        ) : emp.status === "locked" ? (
+                          <>
+                            <Unlock size={10} aria-hidden="true" /> Unlock
+                          </>
+                        ) : (
+                          <>
+                            <Lock size={10} aria-hidden="true" /> Lock
+                          </>
+                        )}
                       </button>
                     </td>
                   </tr>

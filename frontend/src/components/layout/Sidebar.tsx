@@ -5,7 +5,7 @@
  */
 
 import {
-  CloudSnow,
+  FolderLock,
   Folder,
   MessageSquare,
   LogOut,
@@ -71,7 +71,7 @@ export default function Sidebar({
   profile,
   onSignOut,
 }: SidebarProps) {
-  const isAdmin = profile.role === "System Administrator";
+  const isAdmin = profile.role === "system_admin";
 
   function handleViewChange(view: AppView) {
     onViewChange(view);
@@ -107,8 +107,8 @@ export default function Sidebar({
         >
           {!showCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                <CloudSnow
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <FolderLock
                   size={14}
                   className="text-white"
                   aria-hidden="true"
@@ -214,7 +214,7 @@ export default function Sidebar({
             onClick={onSignOut}
             title={showCollapsed ? "Sign Out" : undefined}
             aria-label="Sign out"
-            className={`flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors rounded-lg py-1.5 ${showCollapsed ? "justify-center w-full px-2" : "px-1"}`}
+            className={`flex items-center gap-2 text-sm text-slate-500 border border-slate-200 rounded-md transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 ${showCollapsed ? "justify-center w-full px-2 py-2" : "px-3 py-1.5 w-full"}`}
           >
             <LogOut size={15} aria-hidden="true" />
             {!showCollapsed && <span>Sign Out</span>}

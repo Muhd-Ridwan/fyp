@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { EmployeeProfile, FullProfile } from "../types";
 import { getProfile, updateProfile } from "../api/profileApi";
@@ -128,7 +129,10 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
           <ProfileRow label="Work Email" value={profile.email} />
           <ProfileRow label="Department" value={fullProfile.department} />
           <ProfileRow label="Role" value={fullProfile.role} />
-          <ProfileRow label="Personal Email" value={fullProfile.personal_email} />
+          <ProfileRow
+            label="Personal Email"
+            value={fullProfile.personal_email}
+          />
         </dl>
 
         {/* Contact details — editable */}
@@ -140,8 +144,9 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
             <button
               type="button"
               onClick={startEditing}
-              className="text-sm font-medium text-slate-700 hover:underline"
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1 text-sm font-medium text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
             >
+              <Pencil size={13} aria-hidden="true" />
               Edit
             </button>
           )}
@@ -161,7 +166,7 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
                 placeholder="123 Main St, Kuala Lumpur"
               />
             </div>
@@ -177,7 +182,7 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
                 placeholder="+60 12-345 6789"
               />
             </div>
@@ -190,14 +195,14 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSaving ? "Saving…" : "Save Changes"}
               </button>
               <button
                 type="button"
                 onClick={cancelEditing}
-                className="text-sm text-slate-500 hover:text-slate-700"
+                className="inline-flex items-center rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
               >
                 Cancel
               </button>

@@ -56,7 +56,7 @@ export default function Dashboard() {
       {currentView === "profile" && (
         <ProfilePage idToken={tokens.idToken} profile={profile} />
       )}
-      {currentView === "admin" && profile.role === "System Administrator" && (
+      {currentView === "admin" && profile.role === "system_admin" && (
         <AdminDashboard idToken={tokens.idToken} />
       )}
     </AppShell>

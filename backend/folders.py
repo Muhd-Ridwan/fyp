@@ -15,6 +15,7 @@ import logging
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from rag import delete_document_vectors
 
 import dynamodb_client
 import s3_client
@@ -118,6 +119,7 @@ def delete_folder(
         for fid in all_folder_ids:
             files = dynamodb_client.get_documents_by_department(department, folder_id=fid)
             for file in files:
+                delete_document_vectors(file["file_id"], department)
                 s3_client.delete_file_by_key(file["s3_key"])
                 dynamodb_client.delete_document(department, file["file_id"])
         

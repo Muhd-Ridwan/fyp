@@ -21,7 +21,7 @@ _cognito = boto3.client("cognito-idp", region_name=config.AWS_REGION)
 resend.api_key = config.RESEND_API_KEY
 
 def require_admin(employee: dict = Depends(get_current_employee)) -> dict:
-    if employee.get("role") != "System Administrator":
+    if employee.get("role") != "system_admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return employee
 
@@ -59,8 +59,8 @@ def register_employee(
         create_employee(
             email=body.email,
             name=body.name,
-            department=body.department,
-            role=body.role,
+            department=body.department.lower().strip(),
+            role=body.role.lower().replace(" ", "_"),
             personal_email=body.personal_email,
         )
     except ClientError as e:

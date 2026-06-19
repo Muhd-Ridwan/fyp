@@ -204,7 +204,7 @@ def update_employee_department(email: str, department: str) -> None:
     _employees_table.update_item(
         Key={"email": email},
         UpdateExpression="SET department = :dept",
-        ExpressionAttributeValues={":dept": department},
+        ExpressionAttributeValues={":dept": department.lower().strip()},
     )
 
 def set_employee_status(email: str, status: str) -> None:
