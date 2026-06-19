@@ -21,10 +21,14 @@ from dependencies import get_current_employee
 from documents import router as documents_router
 from folders import router as folders_router
 from chat import router as chat_router
+from admin import router as admin_router
+from onboarding import router as onboarding_router
+from forgot_password import router as forgot_password_router
+from profile import router as profile_router
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="FYP Cloud Document Management", version="0.3.0")
+app = FastAPI(title="FYP Cloud Document Management", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +41,10 @@ app.add_middleware(
 app.include_router(documents_router)
 app.include_router(folders_router)
 app.include_router(chat_router)
+app.include_router(admin_router)
+app.include_router(onboarding_router)
+app.include_router(forgot_password_router)
+app.include_router(profile_router)
 
 @app.get("/health")
 def health():

@@ -187,20 +187,24 @@ def get_all_employees() -> list[dict]:
     response = _employees_table.scan()
     return response.get("Items", [])
 
-def create_employee(email: str, name: str, department: str, role: str) -> None:
+def create_employee(email: str, name: str, department: str, role: str, personal_email: str) -> None:
     _employees_table.put_item(Item={
         "email": email,
         "name": name,
         "department": department,
         "role": role,
+        "personal_email": personal_email,
         "status": "active",
     })
+
+def delete_employee(email: str) -> None:
+    _employees_table.delete_item(Key={"email": email})
 
 def update_employee_department(email: str, department: str) -> None:
     _employees_table.update_item(
         Key={"email": email},
         UpdateExpression="SET department = :dept",
-        ExpressionAttributeValues={":dept", department},
+        ExpressionAttributeValues={":dept": department},
     )
 
 def set_employee_status(email: str, status: str) -> None:
@@ -211,12 +215,11 @@ def set_employee_status(email: str, status: str) -> None:
         ExpressionAttributeValues={":status": status},
     )
 
-def update_employee_onboarding(email: str, personal_email: str, nric_last4_hash: str) -> None:
+def update_employee_onboarding(email: str, nric_last4_hash: str) -> None:
     _employees_table.update_item(
         Key={"email": email},
-        UpdateExpression="SET personal_email = :pe, nric_last4_hash = :nh, onboarding_complete = :oc",
+        UpdateExpression="SET nric_last4_hash = :nh, onboarding_complete = :oc",
         ExpressionAttributeValues={
-            ":pe": personal_email,
             ":nh": nric_last4_hash,
             ":oc": True,
         },
@@ -231,7 +234,7 @@ def update_employee_reset_token(email:str, token: str, expiry: int) -> None:
 
 def clear_employee_reset_token(email: str) -> None:
     _employees_table.update_item(
-        Key={"email", email},
+        Key={"email": email},
         UpdateExpression="REMOVE reset_token, reset_token_expiry",
     )
 

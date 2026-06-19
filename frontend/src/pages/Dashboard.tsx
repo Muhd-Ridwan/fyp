@@ -6,15 +6,16 @@
 import { useState } from "react";
 import { useAuth } from "../auth/useAuth";
 import AppShell from "../components/layout/AppShell";
+import { type AppView } from "../components/layout/Sidebar";
 import DocumentsPage from "./DocumentsPage";
 import AIAssistantPage from "./AIAssistantPage";
+import ProfilePage from "./ProfilePage";
+import AdminDashboard from "./AdminDashboard";
 import type { Message } from "../types";
 
 export default function Dashboard() {
   const { profile, tokens, logout } = useAuth();
-  const [currentView, setCurrentView] = useState<"documents" | "ai">(
-    "documents",
-  );
+  const [currentView, setCurrentView] = useState<AppView>("documents");
   const [messages, setMessages] = useState<Message[]>([]);
   const [initialPrompt, setInitialPrompt] = useState("");
 
@@ -34,13 +35,14 @@ export default function Dashboard() {
       currentView={currentView}
       onViewChange={setCurrentView}
     >
-      {currentView === "documents" ? (
+      {currentView === "documents" && (
         <DocumentsPage
           profile={profile}
           idToken={tokens.idToken}
           onAskAI={handleAskAI}
         />
-      ) : (
+      )}
+      {currentView === "ai" && (
         <AIAssistantPage
           profile={profile}
           idToken={tokens.idToken}
@@ -50,6 +52,12 @@ export default function Dashboard() {
           initialPrompt={initialPrompt}
           onConsumePrompt={() => setInitialPrompt("")}
         />
+      )}
+      {currentView === "profile" && (
+        <ProfilePage idToken={tokens.idToken} profile={profile} />
+      )}
+      {currentView === "admin" && profile.role === "System Administrator" && (
+        <AdminDashboard idToken={tokens.idToken} />
       )}
     </AppShell>
   );

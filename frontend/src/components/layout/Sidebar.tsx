@@ -11,17 +11,21 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  User,
+  ShieldCheck,
 } from "lucide-react";
 import type { EmployeeProfile } from "../../types";
 import DeptBadge from "../ui/DeptBadge";
+
+export type AppView = "documents" | "ai" | "profile" | "admin";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
-  currentView: "documents" | "ai";
-  onViewChange: (view: "documents" | "ai") => void;
+  currentView: AppView;
+  onViewChange: (view: AppView) => void;
   profile: EmployeeProfile;
   onSignOut: () => void;
 }
@@ -67,7 +71,9 @@ export default function Sidebar({
   profile,
   onSignOut,
 }: SidebarProps) {
-  function handleViewChange(view: "documents" | "ai") {
+  const isAdmin = profile.role === "System Administrator";
+
+  function handleViewChange(view: AppView) {
     onViewChange(view);
     onMobileClose();
   }
@@ -164,6 +170,22 @@ export default function Sidebar({
             collapsed={showCollapsed}
             onClick={() => handleViewChange("ai")}
           />
+          <NavItem
+            icon={<User size={16} />}
+            label="My Profile"
+            active={currentView === "profile"}
+            collapsed={showCollapsed}
+            onClick={() => handleViewChange("profile")}
+          />
+          {isAdmin && (
+            <NavItem
+              icon={<ShieldCheck size={16} />}
+              label="Admin"
+              active={currentView === "admin"}
+              collapsed={showCollapsed}
+              onClick={() => handleViewChange("admin")}
+            />
+          )}
         </nav>
 
         {/* User info + Sign out */}

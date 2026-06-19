@@ -5,15 +5,15 @@
  */
 
 import { useState } from "react";
-import Sidebar from "./Sidebar";
+import Sidebar, { type AppView } from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import type { EmployeeProfile } from "../../types";
 
 interface AppShellProps {
   profile: EmployeeProfile;
   onSignOut: () => void;
-  currentView: "documents" | "ai";
-  onViewChange: (view: "documents" | "ai") => void;
+  currentView: AppView;
+  onViewChange: (view: AppView) => void;
   children: React.ReactNode;
 }
 
