@@ -1,0 +1,40 @@
+files:
+  "/etc/pki/tls/certs/cloudflare-origin.crt":
+    mode: "000644"
+    owner: root
+    group: root
+    content: "CERT_PLACEHOLDER"
+
+  "/etc/pki/tls/private/cloudflare-origin.key":
+    mode: "000600"
+    owner: root
+    group: root
+    content: "KEY_PLACEHOLDER"
+
+  "/etc/nginx/conf.d/https.conf":
+    mode: "000644"
+    owner: root
+    group: root
+    content: |
+      server {
+          listen 443 ssl;
+          server_name api.dev-r.org;
+
+          ssl_certificate     /etc/pki/tls/certs/cloudflare-origin.crt;
+          ssl_certificate_key /etc/pki/tls/private/cloudflare-origin.key;
+
+          location / {
+              proxy_pass http://127.0.0.1:8000;
+              proxy_set_header Host              $host;
+              proxy_set_header X-Real-IP         $remote_addr;
+              proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+commands:
+  01_create_dirs:
+    command: "mkdir -p /etc/pki/tls/certs /etc/pki/tls/private"
+  02_reload_nginx:
+    command: "nginx -t && systemctl reload nginx || systemctl restart nginx"
+    ignoreErrors: true

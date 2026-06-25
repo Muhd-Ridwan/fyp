@@ -14,6 +14,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate https.config from template
+        run: |
+          python3 << 'PYEOF'
+          cert = """${{ secrets.CF_ORIGIN_CERT }}"""
+          key = """${{ secrets.CF_ORIGIN_KEY }}"""
+
+          def to_yaml_block(text, indent=6):
+              pad = " " * indent
+              return "|\n" + "\n".join(pad + line for line in text.strip().split("\n"))
+
+          with open("backend/.ebextensions/https.config.template") as f:
+              template = f.read()
+            
+          result = template.replace('"CERT_PLACEHOLDER"', to_yaml_block(cert))
+          result = result.replace('"KEY_PLACEHOLDER"', to_yaml_block(key))
+
+          with open("backend/.ebextensions/https.config", "w") as f:
+              f.write(result)
+
+          print("https.config generated successfully")
+          PYEOF
+
       - name: Zip backend for deployment
         run: |
           cd backend
