@@ -11,6 +11,7 @@ import {
 import { cognitoConfig } from "./cognitoConfig";
 
 const userPool = new CognitoUserPool(cognitoConfig);
+let _pendingCognitoUser: CognitoUser | null = null;
 
 export interface AuthTokens {
   idToken: string;
@@ -18,6 +19,10 @@ export interface AuthTokens {
   refreshToken: string;
   expiresAt: number;
 }
+
+export type LoginResult =
+  | { type: "SUCCESS"; tokens: AuthTokens }
+  | { type: "NEW_PASSWORD_REQUIRED" };
 
 function sessionToTokens(session: CognitoUserSession): AuthTokens {
   const idToken = session.getIdToken();
@@ -33,7 +38,7 @@ function sessionToTokens(session: CognitoUserSession): AuthTokens {
  * Authenticate against Cognito with email + password (SRP flow).
  * Resolves with tokens on success.
  */
-export function login(email: string, password: string): Promise<AuthTokens> {
+export function login(email: string, password: string): Promise<LoginResult> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
@@ -46,12 +51,55 @@ export function login(email: string, password: string): Promise<AuthTokens> {
     });
 
     cognitoUser.authenticateUser(authDetails, {
-      onSuccess: (session) => resolve(sessionToTokens(session)),
+      onSuccess: (session) =>
+        resolve({ type: "SUCCESS", tokens: sessionToTokens(session) }),
       onFailure: (err) => reject(err),
       newPasswordRequired: () => {
-        reject(new Error("NEW_PASSWORD_REQUIRED"));
+        _pendingCognitoUser = cognitoUser;
+        resolve({ type: "NEW_PASSWORD_REQUIRED" });
       },
     });
+  });
+}
+
+export function validatePassword(password: string): string | null {
+  if (password.length < 8) return "Password must be at least 8 characters";
+  if (!/[A-Z]/.test(password))
+    return "Password must contain at least 1 uppercase letter";
+  if (!/[a-z]/.test(password))
+    return "Password must contain at least 1 lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must contain at least 1 number";
+  if (!/[^A-Za-z0-9]/.test(password))
+    return "Password must contain at least 1 symbol";
+  return null;
+}
+
+export function completeNewPassword(newPassword: string): Promise<AuthTokens> {
+  return new Promise((resolve, reject) => {
+    const validationError = validatePassword(newPassword);
+    if (validationError) {
+      reject(new Error(validationError));
+      return;
+    }
+
+    if (!_pendingCognitoUser) {
+      reject(new Error("No pending new password challenge"));
+      return;
+    }
+    _pendingCognitoUser.completeNewPasswordChallenge(
+      newPassword,
+      {},
+      {
+        onSuccess: (session) => {
+          _pendingCognitoUser = null;
+          resolve(sessionToTokens(session));
+        },
+        onFailure: (err) => {
+          _pendingCognitoUser = null;
+          reject(err);
+        },
+      },
+    );
   });
 }
 

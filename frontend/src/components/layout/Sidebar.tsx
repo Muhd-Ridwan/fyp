@@ -5,23 +5,27 @@
  */
 
 import {
-  CloudSnow,
+  FolderLock,
   Folder,
   MessageSquare,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  User,
+  ShieldCheck,
 } from "lucide-react";
 import type { EmployeeProfile } from "../../types";
 import DeptBadge from "../ui/DeptBadge";
+
+export type AppView = "documents" | "ai" | "profile" | "admin";
 
 interface SidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   mobileOpen: boolean;
   onMobileClose: () => void;
-  currentView: "documents" | "ai";
-  onViewChange: (view: "documents" | "ai") => void;
+  currentView: AppView;
+  onViewChange: (view: AppView) => void;
   profile: EmployeeProfile;
   onSignOut: () => void;
 }
@@ -67,7 +71,9 @@ export default function Sidebar({
   profile,
   onSignOut,
 }: SidebarProps) {
-  function handleViewChange(view: "documents" | "ai") {
+  const isAdmin = profile.role === "system_admin";
+
+  function handleViewChange(view: AppView) {
     onViewChange(view);
     onMobileClose();
   }
@@ -101,8 +107,8 @@ export default function Sidebar({
         >
           {!showCollapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                <CloudSnow
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                <FolderLock
                   size={14}
                   className="text-white"
                   aria-hidden="true"
@@ -164,6 +170,22 @@ export default function Sidebar({
             collapsed={showCollapsed}
             onClick={() => handleViewChange("ai")}
           />
+          <NavItem
+            icon={<User size={16} />}
+            label="My Profile"
+            active={currentView === "profile"}
+            collapsed={showCollapsed}
+            onClick={() => handleViewChange("profile")}
+          />
+          {isAdmin && (
+            <NavItem
+              icon={<ShieldCheck size={16} />}
+              label="Admin"
+              active={currentView === "admin"}
+              collapsed={showCollapsed}
+              onClick={() => handleViewChange("admin")}
+            />
+          )}
         </nav>
 
         {/* User info + Sign out */}
@@ -192,7 +214,7 @@ export default function Sidebar({
             onClick={onSignOut}
             title={showCollapsed ? "Sign Out" : undefined}
             aria-label="Sign out"
-            className={`flex items-center gap-2 text-sm text-slate-500 hover:text-red-600 transition-colors rounded-lg py-1.5 ${showCollapsed ? "justify-center w-full px-2" : "px-1"}`}
+            className={`flex items-center gap-2 text-sm text-slate-500 border border-slate-200 rounded-md transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 ${showCollapsed ? "justify-center w-full px-2 py-2" : "px-3 py-1.5 w-full"}`}
           >
             <LogOut size={15} aria-hidden="true" />
             {!showCollapsed && <span>Sign Out</span>}

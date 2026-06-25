@@ -2,7 +2,7 @@
  * Top nav bar shown only on mobile (hidden on others)
  */
 
-import { Menu, CloudSnow } from "lucide-react";
+import { Menu, FolderLock } from "lucide-react";
 import type { EmployeeProfile } from "../../types";
 import DeptBadge from "../ui/DeptBadge";
 
@@ -25,8 +25,8 @@ export default function MobileHeader({
         <Menu size={20} aria-hidden="true" />
       </button>
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-indigo-600 flex items-center justify-center">
-          <CloudSnow size={13} className="text-white" aria-hidden="true" />
+        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+          <FolderLock size={13} className="text-white" aria-hidden="true" />
         </div>
         <span className="text-sm font-semibold text-slate-900">
           DocuVault AI
