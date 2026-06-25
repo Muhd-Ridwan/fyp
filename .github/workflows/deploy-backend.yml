@@ -14,6 +14,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get current version (for rollback)
+        id: current_version
+        run: |
+          CURRENT=$(aws elasticbeanstalk describe-environments \
+            --environment-names Fyp-backend-prod-env \
+            --region ap-southeast-2 \
+            --query 'Environments[0].VersionLabel' \
+            --output text)
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
+
       - name: Generate https.config from template
         run: |
           python3 << 'PYEOF'
@@ -54,3 +68,16 @@ jobs:
           region: ap-southeast-2
           deployment_package: deploy.zip
           wait_for_environment_recovery: 60
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed — rolling back to ${{ steps.current_version.outputs.version }}"
+          aws elasticbeanstalk update-environment \
+            --environment-name Fyp-backend-prod-env \
+            --region ap-southeast-2 \
+            --version-label ${{ steps.current_version.outputs.version }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-southeast-2
