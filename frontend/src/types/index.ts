@@ -62,3 +62,31 @@ export interface DocumentListResponse {
   folder_id: string | null;
   files: Document[];
 }
+
+export interface Employee {
+  email: string;
+  name: string;
+  department: string;
+  role: string;
+  personal_email: string;
+  status: string;
+  onboarding_complete?: boolean;
+}
+
+export interface FullProfile {
+  name: string;
+  department: string;
+  role: string;
+  personal_email: string | null;
+  address: string | null;
+  phone: string | null;
+}
+
+export interface RegisterEmployeePayload {
+  email: string;
+  name: string;
+  department: string;
+  role: string;
+  personal_email: string;
+  temp_password: string;
+}

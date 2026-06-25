@@ -5,15 +5,15 @@
  */
 
 import { useState } from "react";
-import Sidebar from "./Sidebar";
+import Sidebar, { type AppView } from "./Sidebar";
 import MobileHeader from "./MobileHeader";
 import type { EmployeeProfile } from "../../types";
 
 interface AppShellProps {
   profile: EmployeeProfile;
   onSignOut: () => void;
-  currentView: "documents" | "ai";
-  onViewChange: (view: "documents" | "ai") => void;
+  currentView: AppView;
+  onViewChange: (view: AppView) => void;
   children: React.ReactNode;
 }
 
@@ -28,7 +28,7 @@ export default function AppShell({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/20 overflow-hidden">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}

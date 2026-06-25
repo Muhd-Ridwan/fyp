@@ -1,3 +1,5 @@
+import logging
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
@@ -6,6 +8,7 @@ from dependencies import get_current_employee
 from rag import query_documents
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger(__name__)
 
 class ChatRequest(BaseModel):
     question: str
@@ -23,7 +26,11 @@ def chat(
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     
-    chunks = query_documents(question, department)
+    try:
+        chunks = query_documents(question, department)
+    except Exception as e:
+        logger.error("Pinecone query failed for dept %s: %s", department, e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Failed to search documents")
 
     if not chunks:
         context = "No relevant documents found in your department."
@@ -52,5 +59,10 @@ def chat(
         "YOUR ANSWER:"
     )
 
-    answer = generate_response(prompt)
+    try:
+        answer = generate_response(prompt)
+    except Exception as e:
+        logger.error("Bedrock generate response failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="AI service is unavailable, please try again")
+    
     return {"answer": answer}

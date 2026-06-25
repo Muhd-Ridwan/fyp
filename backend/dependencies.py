@@ -52,6 +52,6 @@ def get_current_employee(current_user: dict = Depends(get_current_user)) -> dict
     return {
         "email": email,
         "name": profile.get("name"),
-        "department": profile.get("department"),
-        "role": profile.get("role"),
+        "department": (profile.get("department") or "").lower(),
+        "role": (profile.get("role") or "").lower().replace(" ", "_"),
     }

@@ -1,11 +1,15 @@
 import { AuthProvider } from "./auth/AuthContext";
 import { useAuth } from "./auth/useAuth";
+import { Toaster } from "sonner";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
-import { Toaster } from "sonner";
+import OnboardingPage from "./pages/OnboardingPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, requiresOnboarding } = useAuth();
+  const path = window.location.pathname;
 
   if (isLoading) {
     return (
@@ -15,7 +19,14 @@ function AppRouter() {
     );
   }
 
-  return isAuthenticated ? <Dashboard /> : <LoginPage />;
+  if (requiresOnboarding) return <OnboardingPage />;
+
+  if (path === "/forgot-password") return <ForgotPasswordPage />;
+  if (path === "/reset-password") return <ResetPasswordPage />;
+
+  if (isAuthenticated) return <Dashboard />;
+
+  return <LoginPage />;
 }
 
 export default function App() {

@@ -23,6 +23,7 @@ S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "")
 
 # RESEND API
 RESEND_API_KEY= os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "")
 
 # PINECONE
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
@@ -38,7 +39,7 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID or not S3_BUCKET_NAME or not PINECONE_API_KEY or not RESEND_API_KEY:
+if not COGNITO_USER_POOL_ID or not COGNITO_APP_CLIENT_ID or not S3_BUCKET_NAME or not PINECONE_API_KEY or not RESEND_API_KEY or not RESEND_FROM_EMAIL:
     raise RuntimeError(
-        "Cognito user pool id, cognito app client id, S3 bucket name, Pinecone API, Resend API key must be set"
+        "Cognito user pool id, cognito app client id, S3 bucket name, Pinecone API, Resend API, Resend from email key must be set"
     )

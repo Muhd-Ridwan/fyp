@@ -7,6 +7,8 @@ import { Send, Sparkles, Loader2 } from "lucide-react";
 import type { EmployeeProfile, Message } from "../types";
 import DeptBadge from "../components/ui/DeptBadge";
 import { askQuestion } from "../api/chatApi";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface AIAssistantPageProps {
   profile: EmployeeProfile;
@@ -107,9 +109,9 @@ export default function AIAssistantPage({
           {messages.length > 0 && (
             <button
               onClick={onClearChat}
-              className="text-xs text-slate-400 hover:text-red-500 transition-colors mr-2"
+              className="text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:border-red-300 hover:text-red-500 transition-colors"
             >
-              Clear Chat
+              Clear chat
             </button>
           )}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
@@ -136,7 +138,8 @@ export default function AIAssistantPage({
               Ask about your documents
             </h2>
             <p className="text-sm text-slate-400 max-w-xs leading-relaxed mb-6">
-              Once RAG pipeline is connected, can answer the questions
+              Ask anything about your {profile.department} documents and get
+              instant answers.
             </p>
             <div className="flex flex-col gap-2 w-full max-w-xs">
               {SUGGESTIONS.map((suggestion) => (
@@ -160,7 +163,64 @@ export default function AIAssistantPage({
                 <div
                   className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === "user" ? "bg-indigo-600 text-white rounded-br-sm" : "bg-white border border-slate-200 text-slate-700 rounded-bl-sm"}`}
                 >
-                  {msg.content}
+                  {msg.role === "user" ? (
+                    msg.content
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h1: ({ children }) => (
+                          <h1 className="text-base font-bold mt-2 mb-1">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-sm font-semibold mt-2 mb-1">
+                            {children}
+                          </h2>
+                        ),
+                        h3: ({ children }) => (
+                          <h3 className="text-sm font-medium mt-1 mb-1">
+                            {children}
+                          </h3>
+                        ),
+                        p: ({ children }) => (
+                          <p className="mb-2 last:mb-0">{children}</p>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc pl-4 mb-2 space-y-0.5">
+                            {children}
+                          </ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal pl-4 mb-2 space-y-0.5">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => <li>{children}</li>,
+                        strong: ({ children }) => (
+                          <strong className="font-semibold">{children}</strong>
+                        ),
+                        pre: ({ children }) => (
+                          <pre className="bg-slate-100 rounded p-2 text-xs font-mono mb-2 overflow-x-auto">
+                            {children}
+                          </pre>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-slate-100 rounded px-1 text-xs font-mono">
+                            {children}
+                          </code>
+                        ),
+                        blockquote: ({ children }) => (
+                          <blockquote className="border-l-2 border-slate-300 pl-3 italic text-slate-500 mb-2">
+                            {children}
+                          </blockquote>
+                        ),
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
               </div>
             ))}
@@ -203,7 +263,7 @@ export default function AIAssistantPage({
             className="flex-1 resize-none text-sm px-3 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
           />
           <button
-            onClick={() => handleSend}
+            onClick={() => handleSend()}
             disabled={!input.trim() || loading}
             aria-label="Send message"
             className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-300 flex-shrink-0"
