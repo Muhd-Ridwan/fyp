@@ -1,4 +1,4 @@
-# CICD2
+# CICD
 """
 FYP - FastAPI backend entrypoint
 
