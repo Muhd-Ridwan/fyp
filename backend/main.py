@@ -63,4 +63,4 @@ def read_current_user(employee: dict = Depends(get_current_employee)):
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception on %s %s", request.method, request.url, exc_info=exc)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})# fresh deploy
