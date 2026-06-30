@@ -32,6 +32,14 @@ A department-scoped cloud document management system built as a Final Year Proje
 | Deployment | AWS Elastic Beanstalk (backend) via GitHub Actions CI/CD |
 
 ---
+<p>Login Page</p>
+<img width="543" height="632" alt="image" src="https://github.com/user-attachments/assets/51da138a-ef36-4724-a697-29b32629d822" />
+<p>Dashboard</p>
+<img width="2559" height="595" alt="Dashboard FYP SS" src="https://github.com/user-attachments/assets/f678d216-ae0b-4f6b-b2aa-6d891c235b95" />
+<p>AI Assisstant</p>
+<img width="2559" height="838" alt="AI Assistant FYP SS" src="https://github.com/user-attachments/assets/b9f434d3-2909-4b11-8d99-4c0dbb42e48e" />
+
+---
 
 ## Architecture Overview
 
