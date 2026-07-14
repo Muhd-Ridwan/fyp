@@ -5,6 +5,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface UploadZoneProps {
   onUpload: (files: File[]) => void;
@@ -25,12 +26,36 @@ const ACCEPTED_EXTENSIONS = [
   ".txt",
 ];
 
+function getExtension(filename: string): string {
+  const idx = filename.lastIndexOf(".");
+  return idx === -1 ? "" : filename.slice(idx).toLowerCase();
+}
+
 export default function UploadZone({ onUpload, uploading }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function handleFiles(files: File[]) {
-    if (!uploading) onUpload(files);
+    if (uploading) return;
+
+    const validFiles: File[] = [];
+    const invalidExtensions = new Set<string>();
+
+    for (const file of files) {
+      const ext = getExtension(file.name);
+      if (ACCEPTED_EXTENSIONS.includes(ext)) {
+        validFiles.push(file);
+      } else {
+        invalidExtensions.add(ext || "(no extension)");
+      }
+    }
+
+    if (invalidExtensions.size > 0) {
+      toast.error(
+        `File format not supported: ${Array.from(invalidExtensions).join(",")}`,
+      );
+    }
+    if (validFiles.length) onUpload(validFiles);
   }
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {

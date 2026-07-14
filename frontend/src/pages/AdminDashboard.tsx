@@ -207,7 +207,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="Jane Doe"
+              placeholder="Muhd Ridwan"
             />
           </div>
 
@@ -225,7 +225,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               value={form.email}
               onChange={(e) => setField("email", e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="jane@company.com"
+              placeholder="user@yourcompany.com"
             />
           </div>
 
@@ -243,7 +243,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               value={form.department}
               onChange={(e) => setField("department", e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="Engineering"
+              placeholder="IT"
             />
           </div>
 
@@ -283,7 +283,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
               value={form.personal_email}
               onChange={(e) => setField("personal_email", e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="jane@gmail.com"
+              placeholder="user@gmail.com"
             />
           </div>
 

@@ -144,7 +144,10 @@ export default function Sidebar({
         >
           {!showCollapsed && (
             <div>
-              <DeptBadge department={profile.department} size="md" />
+              <DeptBadge
+                department={profile.department.toUpperCase()}
+                size="md"
+              />
               <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                 You can only access your department's documents.
               </p>

@@ -92,6 +92,11 @@ def register_employee(
                 <p><strong>Temporary Password:</strong> {body.temp_password}</p>
                 <p>Please log in and complete your account setup.
                 You will be prompted to set a new password on first login.</p>
+                <br/>
+                <p>Click <a href="https://fyp.dev-r.org">here</a> to login</p>
+                <br/><br/>
+                <p>Best Regards</p>
+                <p>IT Admin</p>
             """,
             }
         )

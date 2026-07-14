@@ -180,10 +180,12 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
               <input
                 id="phone"
                 type="tel"
+                inputMode="numeric"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                placeholder="+60 12-345 6789"
+                placeholder="60123456789"
+                maxLength={15}
               />
             </div>
             {saveError && (

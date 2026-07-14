@@ -114,7 +114,9 @@ export default function DocumentsPage({
   async function handleUpload(selectedFiles: File[]) {
     setUploading(true);
     const id = toast.loading(
-      selectedFiles.length > 1 ? `Uploading ${selectedFiles.length} files...` : "Uploading file...",
+      selectedFiles.length > 1
+        ? `Uploading ${selectedFiles.length} files...`
+        : "Uploading file...",
     );
     try {
       for (const file of selectedFiles) {
@@ -122,7 +124,9 @@ export default function DocumentsPage({
       }
       await loadData();
       toast.success(
-        selectedFiles.length > 1 ? `${selectedFiles.length} files uploaded` : "File uploaded",
+        selectedFiles.length > 1
+          ? `${selectedFiles.length} files uploaded`
+          : "File uploaded",
         { id },
       );
     } catch (err) {
@@ -247,7 +251,7 @@ export default function DocumentsPage({
             <h1 className="text-lg font-semibold text-slate-900">
               {isInsideFolder
                 ? currentFolderName
-                : `${profile.department} documents`}
+                : `${profile.department.toUpperCase()} Documents`}
             </h1>
           </div>
 
