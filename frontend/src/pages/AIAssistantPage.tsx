@@ -102,7 +102,10 @@ export default function AIAssistantPage({
             </h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-xs text-slate-400">Asking about</span>
-              <DeptBadge department={profile.department} size="sm" />
+              <DeptBadge
+                department={profile.department.toUpperCase()}
+                size="sm"
+              />
               <span className="text-xs text-slate-400">documents only</span>
             </div>
           </div>

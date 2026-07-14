@@ -10,8 +10,6 @@ pdfplumber
 python-docx
 openpyxl
 python-pptx
-pytesseract
-Pillow
 bcrypt
 resend
 email-validator
