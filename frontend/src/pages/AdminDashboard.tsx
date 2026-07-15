@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { RefreshCw, Lock, Unlock, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { Employee, RegisterEmployeePayload } from "../types";
+import Skeleton from "../components/ui/Skeleton";
 import {
   getEmployees,
   registerEmployee,
@@ -364,8 +365,47 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
             </button>
           </div>
         ) : isLoadingEmployees ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-400">
-            Loading employees…
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  <th className="px-6 py-3 text-left">Name</th>
+                  <th className="px-6 py-3 text-left">Work Email</th>
+                  <th className="px-6 py-3 text-left">Department</th>
+                  <th className="px-6 py-3 text-left">Role</th>
+                  <th className="px-6 py-3 text-left">Status</th>
+                  <th className="px-6 py-3 text-left">Onboarding</th>
+                  <th className="px-6 py-3 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-24" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-36" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-20" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-16" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-14" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-14" />
+                    </td>
+                    <td className="px-6 py-3">
+                      <Skeleton className="h-3.5 w-10" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         ) : employees.length === 0 ? (
           <div className="px-6 py-12 text-center text-sm text-slate-400">
