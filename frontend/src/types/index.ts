@@ -66,6 +66,17 @@ export interface DocumentListResponse {
   files: Document[];
 }
 
+export interface MoveResponse {
+  moved_files: number;
+  moved_folders: number;
+  destination_folder_id: string | null;
+}
+
+export interface MoveTarget {
+  fileIds: string[];
+  folderIds: string[];
+}
+
 export interface Employee {
   email: string;
   name: string;

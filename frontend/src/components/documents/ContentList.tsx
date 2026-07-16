@@ -14,6 +14,12 @@ interface ContentListProps {
   onFileRename: (document: Document) => void;
   onFileDelete: (document: Document) => void;
   onFileOpen?: (document: Document) => void;
+  selectedFileIds?: Set<string>;
+  selectedFolderIds?: Set<string>;
+  onToggleFileSelect?: (fileId: string) => void;
+  onToggleFolderSelect?: (folderId: string) => void;
+  onFileMove: (document: Document) => void;
+  onFolderMove: (folder: Folder) => void;
 }
 
 export default function ContentList({
@@ -27,6 +33,12 @@ export default function ContentList({
   onFileRename,
   onFileDelete,
   onFileOpen,
+  selectedFileIds,
+  selectedFolderIds,
+  onToggleFileSelect,
+  onToggleFolderSelect,
+  onFileMove,
+  onFolderMove,
 }: ContentListProps) {
   const isEmpty = folders.length === 0 && files.length === 0;
 
@@ -58,6 +70,9 @@ export default function ContentList({
           onOpen={onFolderOpen}
           onRename={onFolderRename}
           onDelete={onFolderDelete}
+          onMove={onFolderMove}
+          selected={selectedFolderIds?.has(folder.folder_id)}
+          onToggleSelect={onToggleFolderSelect}
         />
       ))}
 
@@ -79,6 +94,9 @@ export default function ContentList({
           onRename={onFileRename}
           onDelete={onFileDelete}
           onOpen={onFileOpen}
+          onMove={onFileMove}
+          selected={selectedFileIds?.has(file.file_id)}
+          onToggleSelect={onToggleFileSelect}
         />
       ))}
     </div>

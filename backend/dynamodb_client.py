@@ -200,6 +200,40 @@ def rename_document(department: str, file_id: str, new_name: str) -> None:
     )
 
 
+def move_document(department: str, file_id: str, folder_id: str | None) -> None:
+    """
+    Move a document to new folder or root.
+    """
+    if folder_id:
+        _documents_table.update_item(
+            Key={"department": department, "file_id": file_id},
+            UpdateExpression="SET folder_id = :fid",
+            ExpressionAttributeValues={":fid": folder_id},
+        )
+    else:
+        _documents_table.update_item(
+            Key={"department": department, "file_id": file_id},
+            UpdateExpression="REMOVE folder_id",
+        )
+
+
+def move_folder(department: str, folder_id: str, parent_folder_id: str | None) -> None:
+    """
+    Move a folder to a new folder or root.
+    """
+    if parent_folder_id:
+        _folders_table.update_item(
+            Key={"department": department, "folder_id": folder_id},
+            UpdateExpression="SET parent_folder_id = :pid",
+            ExpressionAttributeValues={":pid": parent_folder_id},
+        )
+    else:
+        _folders_table.update_item(
+            Key={"department": department, "folder_id": folder_id},
+            UpdateExpression="REMOVE parent_folder_id",
+        )
+
+
 def delete_document(department: str, file_id: str) -> None:
     """
     Delete a document metadata record from DynamoDB

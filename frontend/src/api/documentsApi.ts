@@ -7,6 +7,7 @@
 import type {
   DocumentListResponse,
   DownloadResponse,
+  MoveResponse,
   UploadResponse,
 } from "../types";
 import { getApiBaseUrl, authHeaders, handleResponse } from "./utils";
@@ -96,4 +97,27 @@ export async function deleteDocument(
     headers: authHeaders(idToken),
   });
   return handleResponse(response);
+}
+
+// MOVE
+
+export async function moveItems(
+  idToken: string,
+  fileIds: string[],
+  folderIds: string[],
+  destinationFolderId: string | null,
+): Promise<MoveResponse> {
+  const response = await fetch(`${getApiBaseUrl()}/documents/move`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(idToken),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file_ids: fileIds,
+      folder_ids: folderIds,
+      destination_folder_id: destinationFolderId,
+    }),
+  });
+  return handleResponse<MoveResponse>(response);
 }
