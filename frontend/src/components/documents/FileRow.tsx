@@ -9,13 +9,18 @@ import {
   Download,
 } from "lucide-react";
 import type { Document } from "../../types";
-import ContextMenu, { type ContextMenuItem } from "../ui/ContextMenu";
+import ContextMenu, {
+  type ContextMenuItem,
+  type ContextMenuHandle,
+} from "../ui/ContextMenu";
+import { useRef } from "react";
 
 interface FileRowProps {
   document: Document;
   onDownload: (document: Document) => void;
   onRename: (document: Document) => void;
   onDelete: (document: Document) => void;
+  onOpen?: (document: Document) => void;
 }
 
 interface ExtensionStyle {
@@ -112,8 +117,10 @@ export default function FileRow({
   onDownload,
   onRename,
   onDelete,
+  onOpen,
 }: FileRowProps) {
   const style = getExtensionStyle(document.display_name);
+  const menuRef = useRef<ContextMenuHandle>(null);
 
   const menuItems: ContextMenuItem[] = [
     {
@@ -135,7 +142,14 @@ export default function FileRow({
   ];
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+    <div
+      className={`group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${onOpen ? "cursor-pointer" : ""}`}
+      onClick={onOpen ? () => onOpen(document) : undefined}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        menuRef.current?.openAt(e.clientX, e.clientY);
+      }}
+    >
       {/* File Type Icon */}
       <div
         className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${style.bg} ${style.text}`}
@@ -153,7 +167,7 @@ export default function FileRow({
           {formatDate(document.uploaded_at)}
         </p>
       </div>
-      <ContextMenu items={menuItems} />
+      <ContextMenu items={menuItems} ref={menuRef} />
     </div>
   );
 }

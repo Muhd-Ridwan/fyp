@@ -1,5 +1,7 @@
-// Shared TypeScript types forr fyp frontend
+// Shared TypeScript types definition for fyp frontend
 // All shapes mirror the DynamoDB records returned by FastAPI backend
+// This are for developer convenient. Nothing to do with the system, it is just a typescript thing that need to have
+// Because, typescript check everything before the code even run
 
 export interface EmployeeProfile {
   email: string;
@@ -14,6 +16,7 @@ export interface Folder {
   department: string;
   created_by: string;
   created_at: string;
+  parent_folder_id?: string;
 }
 
 export interface Document {

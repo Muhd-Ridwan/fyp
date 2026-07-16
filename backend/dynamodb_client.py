@@ -17,6 +17,7 @@ _documents_table = _dynamodb.Table(config.DYNAMODB_DOCUMENTS_TABLE)
 
 # EMPLOYEES
 
+
 def get_employee_by_email(email: str) -> dict | None:
     """
     Look up employee profile by email(Email = table partition key).
@@ -29,7 +30,14 @@ def get_employee_by_email(email: str) -> dict | None:
 
 # FOLDERS
 
-def create_folder(department: str, folder_id: str, name: str, created_by: str, parent_folder_id: str | None = None) -> dict:
+
+def create_folder(
+    department: str,
+    folder_id: str,
+    name: str,
+    created_by: str,
+    parent_folder_id: str | None = None,
+) -> dict:
     """
     Create a new folder record for a department.
     """
@@ -46,7 +54,10 @@ def create_folder(department: str, folder_id: str, name: str, created_by: str, p
     _folders_table.put_item(Item=item)
     return item
 
-def get_folders_by_department(department: str, parent_folder_id: str | None = None,) -> list[dict]:
+
+def get_folders_by_department(
+    department: str, parent_folder_id: str | None = None, flat: bool = False
+) -> list[dict]:
     """
     Return all folder belongs to dept
     """
@@ -56,15 +67,18 @@ def get_folders_by_department(department: str, parent_folder_id: str | None = No
     )
     items = response.get("Items", [])
 
+    if flat:
+        return sorted(items, key=lambda x: x.get("name", "").lower())
+
     if parent_folder_id is None:
         # Root level - folders with no parent_folder_id attribute
         items = [item for item in items if "parent_folder_id" not in item]
     else:
         items = [
-            item for item in items
-            if item.get("parent_folder_id") == parent_folder_id
+            item for item in items if item.get("parent_folder_id") == parent_folder_id
         ]
-    return sorted(items, key=lambda x: x.get("created_at", ""))
+    return sorted(items, key=lambda x: x.get("name", "").lower())
+
 
 def rename_folder(department: str, folder_id: str, new_name: str) -> None:
     """
@@ -77,14 +91,14 @@ def rename_folder(department: str, folder_id: str, new_name: str) -> None:
         ExpressionAttributeValues={":name": new_name},
     )
 
-def delete_folder(department: str, folder_id: str)-> None:
+
+def delete_folder(department: str, folder_id: str) -> None:
     """
     Delete a folder record. Does not automatically delete files inside it.
     Caller is responsible for handling orphaned documents if needed.
     """
-    _folders_table.delete_item(
-        Key={"department": department, "folder_id": folder_id}
-    )
+    _folders_table.delete_item(Key={"department": department, "folder_id": folder_id})
+
 
 def get_all_subfolder_ids(department: str, folder_id: str) -> list[str]:
     """
@@ -101,7 +115,9 @@ def get_all_subfolder_ids(department: str, folder_id: str) -> list[str]:
             queue.append(sf["folder_id"])
     return all_ids
 
+
 # DOCUMENTS
+
 
 def create_document(
     department: str,
@@ -118,7 +134,7 @@ def create_document(
     s3_key is a stable UUID-based path - display name is what user sees.
     folder_id None for root-level files.
     """
-    item ={
+    item = {
         "department": department,
         "file_id": file_id,
         "display_name": display_name,
@@ -133,8 +149,9 @@ def create_document(
     _documents_table.put_item(Item=item)
     return item
 
+
 def get_documents_by_department(
-        department: str, folder_id: str | None = None
+    department: str, folder_id: str | None = None, flat: bool = False
 ) -> list[dict]:
     """
     Return all documents for a department.
@@ -147,12 +164,16 @@ def get_documents_by_department(
     )
     items = response.get("Items", [])
 
+    if flat:
+        return sorted(items, key=lambda x: x.get("display_name", "").lower())
+
     if folder_id is None:
         items = [item for item in items if "folder_id" not in item]
     else:
         items = [item for item in items if item.get("folder_id") == folder_id]
-    
-    return sorted(items, key=lambda x: x.get("uploaded_at", ""), reverse=True)
+
+    return sorted(items, key=lambda x: x.get("display_name", "").lower())
+
 
 def get_document(department: str, file_id: str) -> dict | None:
     """
@@ -164,41 +185,52 @@ def get_document(department: str, file_id: str) -> dict | None:
     )
     return response.get("Item")
 
+
 def rename_document(department: str, file_id: str, new_name: str) -> None:
     """
     Update a document name display name only
     """
     _documents_table.update_item(
-        Key={"department": department, "file_id": file_id,},
+        Key={
+            "department": department,
+            "file_id": file_id,
+        },
         UpdateExpression="SET display_name = :name",
         ExpressionAttributeValues={":name": new_name},
     )
+
 
 def delete_document(department: str, file_id: str) -> None:
     """
     Delete a document metadata record from DynamoDB
     Caller separately delete the S3 object using file's s3 key
     """
-    _documents_table.delete_item(
-        Key={"department": department, "file_id": file_id}
-    )
+    _documents_table.delete_item(Key={"department": department, "file_id": file_id})
+
 
 def get_all_employees() -> list[dict]:
     response = _employees_table.scan()
     return response.get("Items", [])
 
-def create_employee(email: str, name: str, department: str, role: str, personal_email: str) -> None:
-    _employees_table.put_item(Item={
-        "email": email,
-        "name": name,
-        "department": department,
-        "role": role,
-        "personal_email": personal_email,
-        "status": "active",
-    })
+
+def create_employee(
+    email: str, name: str, department: str, role: str, personal_email: str
+) -> None:
+    _employees_table.put_item(
+        Item={
+            "email": email,
+            "name": name,
+            "department": department,
+            "role": role,
+            "personal_email": personal_email,
+            "status": "active",
+        }
+    )
+
 
 def delete_employee(email: str) -> None:
     _employees_table.delete_item(Key={"email": email})
+
 
 def update_employee_department(email: str, department: str) -> None:
     _employees_table.update_item(
@@ -207,6 +239,7 @@ def update_employee_department(email: str, department: str) -> None:
         ExpressionAttributeValues={":dept": department.lower().strip()},
     )
 
+
 def set_employee_status(email: str, status: str) -> None:
     _employees_table.update_item(
         Key={"email": email},
@@ -214,6 +247,7 @@ def set_employee_status(email: str, status: str) -> None:
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={":status": status},
     )
+
 
 def update_employee_onboarding(email: str, nric_last4_hash: str) -> None:
     _employees_table.update_item(
@@ -225,18 +259,48 @@ def update_employee_onboarding(email: str, nric_last4_hash: str) -> None:
         },
     )
 
-def update_employee_reset_token(email:str, token: str, expiry: int) -> None:
+
+def update_employee_reset_token(email: str, token: str, expiry: int) -> None:
     _employees_table.update_item(
         Key={"email": email},
         UpdateExpression="SET reset_token = :t, reset_token_expiry = :e",
         ExpressionAttributeValues={":t": token, ":e": expiry},
     )
 
+
 def clear_employee_reset_token(email: str) -> None:
     _employees_table.update_item(
         Key={"email": email},
         UpdateExpression="REMOVE reset_token, reset_token_expiry",
     )
+
+
+def record_failed_reset_attempt(email: str, locked_until: int | None) -> None:
+    """
+    Increments failed attempt counter.
+    Locks the account from further reset attempts until timestamp
+    and reset the counter back to 0
+    """
+    if locked_until is not None:
+        _employees_table.update_item(
+            Key={"email": email},
+            UpdateExpression="SET reset_attempt_count = :zero, reset_locked_until = :locked",
+            ExpressionAttributeValues={":zero": 0, ":locked": locked_until},
+        )
+    else:
+        _employees_table.update_item(
+            Key={"email": email},
+            UpdateExpression="SET reset_attempt_count = if_not_exists(reset_attempt_count, :zero) + :inc",
+            ExpressionAttributeValues={":zero": 0, ":inc": 1},
+        )
+
+
+def clear_reset_attempts(email: str) -> None:
+    _employees_table.update_item(
+        Key={"email": email},
+        UpdateExpression="REMOVE reset_attempt_count, reset_locked_until",
+    )
+
 
 def update_employee_profile(email: str, address: str, phone: str) -> None:
     _employees_table.update_item(

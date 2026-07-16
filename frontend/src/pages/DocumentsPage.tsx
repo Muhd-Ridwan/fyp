@@ -2,13 +2,14 @@
  * Doc page
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   FolderPlus,
   ChevronRight,
-  Loader2,
   AlertCircle,
   Send,
+  Search,
+  X,
 } from "lucide-react";
 import type { Document, Folder, EmployeeProfile } from "../types";
 import {
@@ -29,6 +30,7 @@ import UploadZone from "../components/documents/UploadZone";
 import RenameModal from "../components/documents/RenameModal";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { toast } from "sonner";
+import SkeletonRow from "../components/documents/SkeletonRow";
 
 interface DocumentsPageProps {
   profile: EmployeeProfile;
@@ -60,12 +62,53 @@ export default function DocumentsPage({
   const [deleteTarget, setDeleteTarget] = useState<ActionTarget | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [allFolders, setAllFolders] = useState<Folder[]>([]);
+  const [allFiles, setAllFiles] = useState<Document[]>([]);
 
   // Derived
   const currentFolderId = folderStack.at(-1)?.folderId ?? null;
   const currentFolderName = folderStack.at(-1)?.folderName ?? "";
   const isInsideFolder = folderStack.length > 0;
   const totalItems = folders.length + files.length;
+  const searchActive = searchOpen && searchQuery.trim().length > 0;
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredFolders = useMemo(
+    () =>
+      searchActive
+        ? allFolders.filter((f) =>
+            f.name.toLowerCase().includes(normalizedQuery),
+          )
+        : [],
+    [searchActive, allFolders, normalizedQuery],
+  );
+  const filteredFiles = useMemo(
+    () =>
+      searchActive
+        ? allFiles.filter((f) =>
+            f.display_name.toLowerCase().includes(normalizedQuery),
+          )
+        : [],
+    [searchActive, allFiles, normalizedQuery],
+  );
+
+  function buildAncestorChain(
+    folderId: string | undefined,
+    folderList: Folder[],
+  ): BreadcrumbEntry[] {
+    const chain: BreadcrumbEntry[] = [];
+    let currentId = folderId;
+    while (currentId) {
+      const folder = folderList.find((f) => f.folder_id === currentId);
+      if (!folder) break;
+      chain.unshift({ folderId: folder.folder_id, folderName: folder.name });
+      currentId = folder.parent_folder_id;
+    }
+    return chain;
+  }
 
   // DATA LOADING
 
@@ -107,6 +150,41 @@ export default function DocumentsPage({
 
   function handleBreadcrumbNav(index: number) {
     setFolderStack((prev) => prev.slice(0, index + 1));
+  }
+
+  // SEARCH
+
+  async function handleSearchOpen() {
+    setSearchOpen(true);
+    setSearchLoading(true);
+    try {
+      const [foldersData, filesData] = await Promise.all([
+        listFolders(idToken, undefined, true),
+        listDocuments(idToken, undefined, true),
+      ]);
+      setAllFolders(foldersData.folders);
+      setAllFiles(filesData.files);
+    } catch (err) {
+      console.error(err);
+      toast.error("Search failed to load. Try again");
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function handleSearchClose() {
+    setSearchOpen(false);
+    setSearchQuery("");
+  }
+
+  function handleSearchFolderClick(folderId: string) {
+    setFolderStack(buildAncestorChain(folderId, allFolders));
+    handleSearchClose();
+  }
+
+  function handleSearchFileClick(file: Document) {
+    setFolderStack(buildAncestorChain(file.folder_id, allFolders));
+    handleSearchClose();
   }
 
   // UPLOAD
@@ -317,28 +395,56 @@ export default function DocumentsPage({
 
         {/* Content List */}
         <div className="bg-white rounded-xl border border-slate-200">
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-2">
             <span className="text-sm font-medium text-slate-700">
               Folders &amp; files
             </span>
-            <span className="text-xs text-slate-400">
-              {totalItems} {totalItems === 1 ? "item" : "items"}
-            </span>
+            {searchOpen ? (
+              <div className="flex items-center gap-2 flex-1 max-w-xs">
+                <input
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search folders & files.."
+                  className="flex-1 text-sm px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <button
+                  onClick={handleSearchClose}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close search"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400">
+                  {totalItems} {totalItems === 1 ? "item" : "items"}
+                </span>
+                <button
+                  onClick={handleSearchOpen}
+                  className="text-slate-400 hover:text-indigo-600"
+                  aria-label="Search folders & files"
+                >
+                  <Search size={16} />
+                </button>
+              </div>
+            )}
           </div>
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2
-                size={24}
-                className="text-indigo-500 animate-spin"
-                aria-hidden="true"
-              />
+          {loading || (searchOpen && searchLoading) ? (
+            <div className="divide-y divide-slate-100">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
             </div>
           ) : (
             <ContentList
-              folders={folders}
-              files={files}
+              folders={searchActive ? filteredFolders : folders}
+              files={searchActive ? filteredFiles : files}
               isInsideFolder={isInsideFolder}
-              onFolderOpen={handleFolderOpen}
+              onFolderOpen={
+                searchActive ? handleSearchFolderClick : handleFolderOpen
+              }
               onFolderRename={(folder) =>
                 setRenameTarget({ type: "folder", item: folder })
               }
@@ -352,6 +458,7 @@ export default function DocumentsPage({
               onFileDelete={(file) =>
                 setDeleteTarget({ type: "file", item: file })
               }
+              onFileOpen={searchActive ? handleSearchFileClick : undefined}
             />
           )}
         </div>

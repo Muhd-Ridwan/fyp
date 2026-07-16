@@ -28,9 +28,11 @@ export async function createFolder(
 export async function listFolders(
   idToken: string,
   parentFolderId?: string,
+  flat?: boolean,
 ): Promise<FolderListResponse> {
   const url = new URL(`${getApiBaseUrl()}/folders`);
   if (parentFolderId) url.searchParams.set("parent_folder_id", parentFolderId);
+  if (flat) url.searchParams.set("flat", "true");
 
   const response = await fetch(url.toString(), {
     headers: authHeaders(idToken),

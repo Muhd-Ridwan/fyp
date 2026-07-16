@@ -3,6 +3,7 @@ import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { EmployeeProfile, FullProfile } from "../types";
 import { getProfile, updateProfile } from "../api/profileApi";
+import Skeleton from "../components/ui/Skeleton";
 
 interface ProfilePageProps {
   idToken: string;
@@ -92,8 +93,35 @@ export default function ProfilePage({ idToken, profile }: ProfilePageProps) {
 
   if (isLoading) {
     return (
-      <div className="p-6 text-center text-sm text-slate-400">
-        Loading profile…
+      <div className="mx-auto max-w-2xl space-y-6 p-6">
+        <div>
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-64 mt-2" />
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-4">
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <dl className="divide-y divide-slate-50 px-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3">
+                <Skeleton className="h-3.5 w-32 shrink-0" />
+                <Skeleton className="h-3.5 flex-1 max-w-[10rem]" />
+              </div>
+            ))}
+          </dl>
+          <div className="border-t border-slate-100 px-6 py-4">
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <dl className="divide-y divide-slate-50 px-6 pb-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 py-3">
+                <Skeleton className="h-3.5 w-32 shrink-0" />
+                <Skeleton className="h-3.5 flex-1 max-w-[10rem]" />
+              </div>
+            ))}
+          </dl>
+        </div>
       </div>
     );
   }
