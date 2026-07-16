@@ -37,6 +37,7 @@ interface DocumentsPageProps {
   profile: EmployeeProfile;
   idToken: string;
   onAskAI?: (prompt: string) => void;
+  onSummarize: (document: Document) => void;
 }
 
 interface BreadcrumbEntry {
@@ -52,6 +53,7 @@ export default function DocumentsPage({
   profile,
   idToken,
   onAskAI,
+  onSummarize,
 }: DocumentsPageProps) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [files, setFiles] = useState<Document[]>([]);
@@ -614,6 +616,7 @@ export default function DocumentsPage({
                 selectedFolderIds={selectedFolderIds}
                 onToggleFileSelect={handleToggleFileSelect}
                 onToggleFolderSelect={handleToggleFolderSelect}
+                onFileSummarize={onSummarize}
               />
             )}
           </div>

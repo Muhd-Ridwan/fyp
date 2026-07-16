@@ -49,6 +49,23 @@ export interface Message {
   content: string;
 }
 
+export interface ActiveFileContext {
+  fileId: string;
+  fileName: string;
+}
+
+export interface PendingSummarize {
+  fileId: string;
+  fileName: string;
+  requestId: string;
+}
+
+export interface SummarizeResponse {
+  file_id: string;
+  display_name: string;
+  answer: string;
+}
+
 export interface DownloadResponse {
   file_id: string;
   filename: string;
