@@ -12,12 +12,14 @@ Documents are stored under department-scoped prefixes:
 import boto3
 
 from config import AWS_REGION, S3_BUCKET_NAME
+
 _s3 = boto3.client("s3", region_name=AWS_REGION)
 
+
 def upload_file_by_key(
-        file_obj,
-        s3_key: str,
-        content_type: str = "application/octet-stream",
+    file_obj,
+    s3_key: str,
+    content_type: str = "application/octet-stream",
 ) -> None:
     """
     Upload a file-like object to S333 at given UUID based key
@@ -30,12 +32,14 @@ def upload_file_by_key(
         ExtraArgs={"ContentType": content_type},
     )
 
+
 def delete_file_by_key(s3_key: str) -> None:
     """
     Delete a file from S3 by its full key.
     Used for single deletion and cascade deletion
     """
     _s3.delete_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+
 
 def generate_download_url(s3_key: str, filename: str, expires_in: int = 300) -> str:
     """
@@ -49,5 +53,14 @@ def generate_download_url(s3_key: str, filename: str, expires_in: int = 300) -> 
             "Key": s3_key,
             "ResponseContentDisposition": f'attachment; filename="{filename}"',
         },
-        ExpiresIn = expires_in,
+        ExpiresIn=expires_in,
     )
+
+
+def download_file_by_key(s3_key: str) -> bytes:
+    """
+    Download a file's raw bytes from S3 by its key.
+    Used server-side by Summarize/file-grounded chat, which need the full extracted text.
+    """
+    response = _s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+    return response["Body"].read()

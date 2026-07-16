@@ -3,12 +3,18 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, Loader2 } from "lucide-react";
-import type { EmployeeProfile, Message } from "../types";
+import { Send, Sparkles, Loader2, X } from "lucide-react";
+import type {
+  EmployeeProfile,
+  Message,
+  ActiveFileContext,
+  PendingSummarize,
+} from "../types";
 import DeptBadge from "../components/ui/DeptBadge";
 import { askQuestion } from "../api/chatApi";
+import { summarizeDocument } from "../api/documentsApi";
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import remarkGfm from "remark-gfm"; // Plugin for react-markdown
 
 interface AIAssistantPageProps {
   profile: EmployeeProfile;
@@ -16,6 +22,10 @@ interface AIAssistantPageProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   onClearChat: () => void;
+  activeFile: ActiveFileContext | null;
+  setActiveFile: React.Dispatch<React.SetStateAction<ActiveFileContext | null>>;
+  pendingSummarize?: PendingSummarize | null;
+  onConsumeSummarize?: () => void;
   initialPrompt?: string;
   onConsumePrompt?: () => void;
 }
@@ -31,6 +41,10 @@ export default function AIAssistantPage({
   messages,
   setMessages,
   onClearChat,
+  activeFile,
+  setActiveFile,
+  pendingSummarize,
+  onConsumeSummarize,
   initialPrompt,
   onConsumePrompt,
 }: AIAssistantPageProps) {
@@ -38,6 +52,7 @@ export default function AIAssistantPage({
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const handledPromptRef = useRef("");
+  const handledSummarizeRef = useRef("");
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +67,21 @@ export default function AIAssistantPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPrompt]);
 
+  useEffect(() => {
+    if (
+      pendingSummarize &&
+      pendingSummarize.requestId !== handledSummarizeRef.current
+    ) {
+      handledSummarizeRef.current = pendingSummarize.requestId;
+      void handleSummarizeFile(
+        pendingSummarize.fileId,
+        pendingSummarize.fileName,
+      );
+      onConsumeSummarize?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingSummarize]);
+
   async function handleSend(textOverride?: string) {
     const text = (textOverride ?? input).trim();
     if (!text || loading) return;
@@ -62,19 +92,62 @@ export default function AIAssistantPage({
       content: text,
     };
 
+    const history = messages;
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
     // RAG PIPELINE
     try {
-      const data = await askQuestion(idToken, text);
+      const data = await askQuestion(
+        idToken,
+        text,
+        history,
+        activeFile?.fileId,
+      );
       const aiMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
         content: data.answer,
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
+      console.error(err);
+      const aiMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content:
+          err instanceof Error
+            ? err.message
+            : "Something went wrong. Please try again.",
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSummarizeFile(fileId: string, fileName: string) {
+    if (loading) return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: `Summarize "${fileName}"`,
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setLoading(true);
+
+    try {
+      const data = await summarizeDocument(idToken, fileId);
+      const aiMessage: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: data.answer,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setActiveFile({ fileId, fileName });
     } catch (err) {
       console.error(err);
       const aiMessage: Message = {
@@ -112,7 +185,7 @@ export default function AIAssistantPage({
           {messages.length > 0 && (
             <button
               onClick={onClearChat}
-              className="text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:border-red-300 hover:text-red-500 transition-colors"
+              className="text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:border-red-300 hover:text-white-500 hover:bg-red-100 transition-colors cursor-pointer"
             >
               Clear chat
             </button>
@@ -245,6 +318,21 @@ export default function AIAssistantPage({
 
       {/* Input */}
       <div className="px-4 py-3 md:px-6 border-t border-slate-200 bg-white flex-shrink-0">
+        {activeFile && (
+          <div className="flex items-center gap-1.5 mb-2 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-700 w-fit">
+            <Sparkles size={12} aria-hidden="true" />
+            <span>
+              Grounded in: <strong>{activeFile.fileName}</strong>
+            </span>
+            <button
+              onClick={() => setActiveFile(null)}
+              aria-label="Exit file-grounded mode"
+              className="text-indigo-400 hover:text-indigo-700"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <textarea
             value={input}

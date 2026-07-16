@@ -11,9 +11,15 @@ import DocumentsPage from "./DocumentsPage";
 import AIAssistantPage from "./AIAssistantPage";
 import ProfilePage from "./ProfilePage";
 import AdminDashboard from "./AdminDashboard";
-import type { Message } from "../types";
+import type {
+  Message,
+  Document,
+  ActiveFileContext,
+  PendingSummarize,
+} from "../types";
 
 const CHAT_STORAGE_KEY = "docuvault_chat_messages";
+const ACTIVE_FILE_STORAGE_KEY = "docuvault_chat_active_file";
 
 export default function Dashboard() {
   const { profile, tokens, logout } = useAuth();
@@ -23,19 +29,44 @@ export default function Dashboard() {
     return stored ? JSON.parse(stored) : [];
   });
   const [initialPrompt, setInitialPrompt] = useState("");
+  const [activeFile, setActiveFile] = useState<ActiveFileContext | null>(() => {
+    const stored = localStorage.getItem(ACTIVE_FILE_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  });
+  const [pendingSummarize, setPendingSummarize] =
+    useState<PendingSummarize | null>(null);
 
   useEffect(() => {
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
+
+  useEffect(() => {
+    if (activeFile) {
+      localStorage.setItem(ACTIVE_FILE_STORAGE_KEY, JSON.stringify(activeFile));
+    } else {
+      localStorage.removeItem(ACTIVE_FILE_STORAGE_KEY);
+    }
+  }, [activeFile]);
 
   function handleAskAI(prompt: string) {
     setInitialPrompt(prompt);
     setCurrentView("ai");
   }
 
+  function handleSummarize(document: Document) {
+    setPendingSummarize({
+      fileId: document.file_id,
+      fileName: document.display_name,
+      requestId: crypto.randomUUID(),
+    });
+    setCurrentView("ai");
+  }
+
   function handleSignOut() {
     setMessages([]);
+    setActiveFile(null);
     localStorage.removeItem(CHAT_STORAGE_KEY);
+    localStorage.removeItem(ACTIVE_FILE_STORAGE_KEY);
     logout();
   }
 
@@ -55,6 +86,7 @@ export default function Dashboard() {
           profile={profile}
           idToken={tokens.idToken}
           onAskAI={handleAskAI}
+          onSummarize={handleSummarize}
         />
       )}
       {currentView === "ai" && (
@@ -65,8 +97,14 @@ export default function Dashboard() {
           setMessages={setMessages}
           onClearChat={() => {
             setMessages([]);
+            setActiveFile(null);
             localStorage.removeItem(CHAT_STORAGE_KEY);
+            localStorage.removeItem(ACTIVE_FILE_STORAGE_KEY);
           }}
+          activeFile={activeFile}
+          setActiveFile={setActiveFile}
+          pendingSummarize={pendingSummarize}
+          onConsumeSummarize={() => setPendingSummarize(null)}
           initialPrompt={initialPrompt}
           onConsumePrompt={() => setInitialPrompt("")}
         />
