@@ -3,7 +3,7 @@
  * employee's department (from the backend's /me response).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../auth/useAuth";
 import AppShell from "../components/layout/AppShell";
 import { type AppView } from "../components/layout/Sidebar";
@@ -13,15 +13,30 @@ import ProfilePage from "./ProfilePage";
 import AdminDashboard from "./AdminDashboard";
 import type { Message } from "../types";
 
+const CHAT_STORAGE_KEY = "docuvault_chat_messages";
+
 export default function Dashboard() {
   const { profile, tokens, logout } = useAuth();
   const [currentView, setCurrentView] = useState<AppView>("documents");
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
   const [initialPrompt, setInitialPrompt] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
 
   function handleAskAI(prompt: string) {
     setInitialPrompt(prompt);
     setCurrentView("ai");
+  }
+
+  function handleSignOut() {
+    setMessages([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    logout();
   }
 
   if (!profile || !tokens) {
@@ -31,7 +46,7 @@ export default function Dashboard() {
   return (
     <AppShell
       profile={profile}
-      onSignOut={logout}
+      onSignOut={handleSignOut}
       currentView={currentView}
       onViewChange={setCurrentView}
     >
@@ -48,7 +63,10 @@ export default function Dashboard() {
           idToken={tokens.idToken}
           messages={messages}
           setMessages={setMessages}
-          onClearChat={() => setMessages([])}
+          onClearChat={() => {
+            setMessages([]);
+            localStorage.removeItem(CHAT_STORAGE_KEY);
+          }}
           initialPrompt={initialPrompt}
           onConsumePrompt={() => setInitialPrompt("")}
         />
