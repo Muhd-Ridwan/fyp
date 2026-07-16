@@ -7,6 +7,7 @@ import {
   Pencil,
   Trash2,
   Download,
+  Move,
 } from "lucide-react";
 import type { Document } from "../../types";
 import ContextMenu, {
@@ -20,7 +21,10 @@ interface FileRowProps {
   onDownload: (document: Document) => void;
   onRename: (document: Document) => void;
   onDelete: (document: Document) => void;
+  onMove: (document: Document) => void;
   onOpen?: (document: Document) => void;
+  selected?: boolean;
+  onToggleSelect?: (fileId: string) => void;
 }
 
 interface ExtensionStyle {
@@ -117,7 +121,10 @@ export default function FileRow({
   onDownload,
   onRename,
   onDelete,
+  onMove,
   onOpen,
+  selected = false,
+  onToggleSelect,
 }: FileRowProps) {
   const style = getExtensionStyle(document.display_name);
   const menuRef = useRef<ContextMenuHandle>(null);
@@ -134,6 +141,11 @@ export default function FileRow({
       onClick: () => onRename(document),
     },
     {
+      label: "Move",
+      icon: <Move size={14} />,
+      onClick: () => onMove(document),
+    },
+    {
       label: "Delete",
       icon: <Trash2 size={14} />,
       onClick: () => onDelete(document),
@@ -143,13 +155,23 @@ export default function FileRow({
 
   return (
     <div
-      className={`group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${onOpen ? "cursor-pointer" : ""}`}
+      className={`group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${onOpen ? "cursor-pointer" : ""} ${selected ? "bg-indigo-50" : ""}`}
       onClick={onOpen ? () => onOpen(document) : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
         menuRef.current?.openAt(e.clientX, e.clientY);
       }}
     >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => onToggleSelect(document.file_id)}
+          className={`w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 flex-shrink-0 transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+          aria-label={`Select ${document.display_name}`}
+        />
+      )}
       {/* File Type Icon */}
       <div
         className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${style.bg} ${style.text}`}

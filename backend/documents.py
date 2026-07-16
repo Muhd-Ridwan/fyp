@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from dependencies import get_current_employee
 from rag import index_document, delete_document_vectors
 from botocore.exceptions import ClientError
+from config import MAX_UPLOAD_SIZE_BYTES
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 logger = logging.getLogger(__name__)
@@ -28,6 +29,12 @@ logger = logging.getLogger(__name__)
 
 class RenameDocumentRequest(BaseModel):
     name: str
+
+
+class MoveItemsRequest(BaseModel):
+    file_ids: list[str] = []
+    folder_ids: list[str] = []
+    destination_folder_id: str | None = None
 
 
 @router.post("/upload")
@@ -60,7 +67,15 @@ async def upload_document(
     content_type = file.content_type or "application/octet-stream"
 
     # Upload bytes to S3
-    file_bytes = await file.read()
+    file_bytes = bytearray()
+    chunk_size = 1024 * 1024
+    while chunk := await file.read(chunk_size):
+        file_bytes.extend(chunk)
+        if len(file_bytes) > MAX_UPLOAD_SIZE_BYTES:
+            raise HTTPException(
+                status_code=413, detail="File exceeds 50MB upload limit."
+            )
+    file_bytes = bytes(file_bytes)
     try:
         s3_client.upload_file_by_key(io.BytesIO(file_bytes), s3_key, content_type)
     except ClientError as e:
@@ -194,6 +209,61 @@ def rename_document(
         raise HTTPException(status_code=503, detail="Failed to rename file")
 
     return {"file_id": file_id, "display_name": name}
+
+
+@router.post("/move")
+def move_items(
+    body: MoveItemsRequest,
+    employee: dict = Depends(get_current_employee),
+):
+    """
+    Move a batch of files / folders to a new destination folder.
+    Folder logic same, it will cycle checked first.
+    """
+    department = employee["department"]
+    if not department:
+        raise HTTPException(status_code=403, detail="No dept assigned to this acc.")
+
+    if not body.file_ids and not body.folder_ids:
+        raise HTTPException(status_code=400, detail="Nothing selected to move")
+
+    destination = body.destination_folder_id
+
+    for folder_id in body.folder_ids:
+        if folder_id == destination:
+            raise HTTPException(
+                status_code=400, detail="Cannot move a folder into itself"
+            )
+        try:
+            descendant_ids = dynamodb_client.get_all_subfolder_ids(
+                department, folder_id
+            )
+        except ClientError as e:
+            logger.error(
+                "get_all_subfolder_ids failed for %s: %s", folder_id, e, exc_info=True
+            )
+            raise HTTPException(status_code=503, detail="Failed to validate move")
+        if destination is not None and destination in descendant_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot move a folder into one of its own subfolders",
+            )
+
+    try:
+        for file_id in body.file_ids:
+            dynamodb_client.move_document(department, file_id, destination)
+        for folder_id in body.folder_ids:
+            dynamodb_client.move_folder(department, folder_id, destination)
+
+    except ClientError as e:
+        logger.error("Move failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Failed to move item(s)")
+
+    return {
+        "moved_files": len(body.file_ids),
+        "moved_folders": len(body.folder_ids),
+        "destination_folder_id": destination,
+    }
 
 
 @router.delete("/{file_id}")

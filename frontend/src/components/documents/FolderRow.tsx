@@ -3,7 +3,7 @@ import ContextMenu, {
   type ContextMenuItem,
   type ContextMenuHandle,
 } from "../ui/ContextMenu";
-import { Pencil, Trash2, Folder } from "lucide-react";
+import { Pencil, Trash2, Folder, Move } from "lucide-react";
 import { useRef } from "react";
 
 interface FolderRowProps {
@@ -11,6 +11,9 @@ interface FolderRowProps {
   onOpen: (folderId: string) => void;
   onRename: (folder: FolderType) => void;
   onDelete: (folder: FolderType) => void;
+  onMove: (folder: FolderType) => void;
+  selected?: boolean;
+  onToggleSelect?: (folderId: string) => void;
 }
 
 function formatDate(iso: string): string {
@@ -26,6 +29,9 @@ export default function FolderRow({
   onOpen,
   onRename,
   onDelete,
+  onMove,
+  selected = false,
+  onToggleSelect,
 }: FolderRowProps) {
   const menuRef = useRef<ContextMenuHandle>(null);
   const menuItems: ContextMenuItem[] = [
@@ -40,6 +46,11 @@ export default function FolderRow({
       onClick: () => onRename(folder),
     },
     {
+      label: "Move",
+      icon: <Move size={14} />,
+      onClick: () => onMove(folder),
+    },
+    {
       label: "Delete",
       icon: <Trash2 size={14} />,
       onClick: () => onDelete(folder),
@@ -49,13 +60,23 @@ export default function FolderRow({
 
   return (
     <div
-      className="group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
+      className={`group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer ${selected ? "bg-indigo-50" : ""}`}
       onDoubleClick={() => onOpen(folder.folder_id)}
       onContextMenu={(e) => {
         e.preventDefault();
         menuRef.current?.openAt(e.clientX, e.clientY);
       }}
     >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => onToggleSelect(folder.folder_id)}
+          className={`w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 flex-shrink-0 transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+          aria-label={`Select ${folder.name}`}
+        />
+      )}
       {/* Folder Icon */}
       <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
         <Folder size={18} className="text-amber-600" aria-hidden="true" />
