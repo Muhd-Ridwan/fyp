@@ -37,9 +37,11 @@ export async function uploadDocument(
 export async function listDocuments(
   idToken: string,
   folderId?: string,
+  flat?: boolean,
 ): Promise<DocumentListResponse> {
   const url = new URL(`${getApiBaseUrl()}/documents/list`);
   if (folderId) url.searchParams.set("folder_id", folderId);
+  if (flat) url.searchParams.set("flat", "true");
 
   const response = await fetch(url.toString(), {
     headers: authHeaders(idToken),

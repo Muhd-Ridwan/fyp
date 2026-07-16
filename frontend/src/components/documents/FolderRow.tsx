@@ -1,6 +1,10 @@
 import type { Folder as FolderType } from "../../types";
-import ContextMenu, { type ContextMenuItem } from "../ui/ContextMenu";
+import ContextMenu, {
+  type ContextMenuItem,
+  type ContextMenuHandle,
+} from "../ui/ContextMenu";
 import { Pencil, Trash2, Folder } from "lucide-react";
+import { useRef } from "react";
 
 interface FolderRowProps {
   folder: FolderType;
@@ -23,6 +27,7 @@ export default function FolderRow({
   onRename,
   onDelete,
 }: FolderRowProps) {
+  const menuRef = useRef<ContextMenuHandle>(null);
   const menuItems: ContextMenuItem[] = [
     {
       label: "Open",
@@ -46,6 +51,10 @@ export default function FolderRow({
     <div
       className="group flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
       onDoubleClick={() => onOpen(folder.folder_id)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        menuRef.current?.openAt(e.clientX, e.clientY);
+      }}
     >
       {/* Folder Icon */}
       <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
@@ -61,7 +70,7 @@ export default function FolderRow({
           Folder &middot; {formatDate(folder.created_at)}
         </p>
       </div>
-      <ContextMenu items={menuItems} />
+      <ContextMenu items={menuItems} ref={menuRef} />
     </div>
   );
 }

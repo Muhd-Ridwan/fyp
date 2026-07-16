@@ -13,6 +13,7 @@ interface ContentListProps {
   onFileDownload: (document: Document) => void;
   onFileRename: (document: Document) => void;
   onFileDelete: (document: Document) => void;
+  onFileOpen?: (document: Document) => void;
 }
 
 export default function ContentList({
@@ -25,6 +26,7 @@ export default function ContentList({
   onFileDownload,
   onFileRename,
   onFileDelete,
+  onFileOpen,
 }: ContentListProps) {
   const isEmpty = folders.length === 0 && files.length === 0;
 
@@ -76,6 +78,7 @@ export default function ContentList({
           onDownload={onFileDownload}
           onRename={onFileRename}
           onDelete={onFileDelete}
+          onOpen={onFileOpen}
         />
       ))}
     </div>

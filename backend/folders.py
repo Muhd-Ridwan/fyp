@@ -24,12 +24,15 @@ from dependencies import get_current_employee
 router = APIRouter(prefix="/folders", tags=["folders"])
 logger = logging.getLogger(__name__)
 
+
 class CreateFolderRequest(BaseModel):
     name: str
     parent_folder_id: str | None = None
 
+
 class RenameFolderRequest(BaseModel):
     name: str
+
 
 @router.post("")
 def create_folder(
@@ -44,7 +47,7 @@ def create_folder(
 
     if not name:
         raise HTTPException(status_code=400, detail="Folder name cannot empty")
-    
+
     folder_id = str(uuid.uuid4())
     try:
         folder = dynamodb_client.create_folder(
@@ -59,9 +62,11 @@ def create_folder(
         raise HTTPException(status_code=503, detail="Failed to create folder")
     return folder
 
+
 @router.get("")
 def list_folders(
-    parent_folder_id: str | None = Query(default=None), 
+    parent_folder_id: str | None = Query(default=None),
+    flat: bool = Query(default=False),
     employee: dict = Depends(get_current_employee),
 ):
     """
@@ -69,11 +74,14 @@ def list_folders(
     """
     department = employee["department"]
     try:
-        folders = dynamodb_client.get_folders_by_department(department, parent_folder_id=parent_folder_id)
+        folders = dynamodb_client.get_folders_by_department(
+            department, parent_folder_id=parent_folder_id, flat=flat
+        )
     except ClientError as e:
         logger.error("Dynamo DB get folder failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to retrieve folders")
     return {"department": department, "folders": folders}
+
 
 @router.patch("/{folder_id}/rename")
 def rename_folder(
@@ -96,6 +104,7 @@ def rename_folder(
         raise HTTPException(status_code=503, detail="Failed to rename folder")
     return {"folder_id": folder_id, "name": name}
 
+
 @router.delete("/{folder_id}")
 def delete_folder(
     folder_id: str,
@@ -117,16 +126,24 @@ def delete_folder(
         )
 
         for fid in all_folder_ids:
-            files = dynamodb_client.get_documents_by_department(department, folder_id=fid)
+            files = dynamodb_client.get_documents_by_department(
+                department, folder_id=fid
+            )
             for file in files:
                 delete_document_vectors(file["file_id"], department)
                 s3_client.delete_file_by_key(file["s3_key"])
                 dynamodb_client.delete_document(department, file["file_id"])
-        
+
         for fid in reversed(all_folder_ids):
             dynamodb_client.delete_folder(department, fid)
     except ClientError as e:
-        logger.error("delete folder failed for %s/%s: %s", department, folder_id, e, exc_info=True)
+        logger.error(
+            "delete folder failed for %s/%s: %s",
+            department,
+            folder_id,
+            e,
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Failed to delete folder")
 
     return {
