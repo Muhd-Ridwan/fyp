@@ -1,6 +1,10 @@
 import logging
+import re
+from datetime import datetime
 from botocore.exceptions import ClientError
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from fpdf import FPDF
 from pydantic import BaseModel
 
 from bedrock_client import generate_response
@@ -13,6 +17,7 @@ import s3_client
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)
 
+# For the AI Chat to hold a memory of 10 messages only. (Can change if want but later it will effect the cost/latency)
 MAX_HISTORY_MESSAGES = 10
 
 
@@ -25,6 +30,10 @@ class ChatRequest(BaseModel):
     question: str
     history: list[ChatMessage] = []
     file_id: str | None = None
+
+
+class ExportChatRequest(BaseModel):
+    messages: list[ChatMessage]
 
 
 def _format_history(history: list[ChatMessage]) -> str:
@@ -153,3 +162,73 @@ def chat(
         )
 
     return {"answer": answer}
+
+
+_MARKDOWN_CLEANUP = {
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2013": "-",
+    "\u2014": "--",
+    "\u2026": "...",
+    "\u2022": "-",
+}
+
+
+def _sanitize_for_pdf(text: str) -> str:
+    for bad, good in _MARKDOWN_CLEANUP.items():
+        text = text.replace(bad, good)
+    # fpdf2 MD=True only understands
+    # "# heading" - strip heading markers so they dont render literally.
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    # replacing emoji
+    return text.encode("latin-1", "replace").decode("latin-1")
+
+
+@router.post("/export")
+def export_chat(
+    body: ExportChatRequest,
+    employee: dict = Depends(get_current_employee),
+):
+    """
+    Render the given conversation as a PDF, built fully from server-side
+    """
+    if not body.messages:
+        raise HTTPException(status_code=400, detail="No messages to export")
+
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("Helvetica", style="B", size=16)
+        pdf.cell(0, 10, "DocuVault AI - Chat Export", new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Helvetica", size=9)
+        pdf.set_text_color(120, 120, 120)
+        exported_line = (
+            f"Exported by {employee['name']} on "
+            f"{datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        )
+        pdf.cell(0, 6, exported_line, new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(4)
+
+        for msg in body.messages:
+            label = "You" if msg.role == "user" else "DocuVault AI"
+            pdf.set_font("Helvetica", style="B", size=11)
+            pdf.cell(0, 7, label, new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("Helvetica", size=11)
+            pdf.multi_cell(0, 6, _sanitize_for_pdf(msg.content), markdown=True)
+            pdf.ln(4)
+        pdf_bytes = bytes(pdf.output())
+    except Exception as e:
+        logger.error("Chat PDF export failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Failed to generate PDF export")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="docuvault-chat-export.pdf"'
+        },
+    )
