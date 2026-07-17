@@ -3,7 +3,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, Loader2, X } from "lucide-react";
+import { Send, Sparkles, Loader2, X, Download } from "lucide-react";
 import type {
   EmployeeProfile,
   Message,
@@ -11,10 +11,11 @@ import type {
   PendingSummarize,
 } from "../types";
 import DeptBadge from "../components/ui/DeptBadge";
-import { askQuestion } from "../api/chatApi";
+import { askQuestion, exportChat } from "../api/chatApi";
 import { summarizeDocument } from "../api/documentsApi";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm"; // Plugin for react-markdown
+import { toast } from "sonner";
 
 interface AIAssistantPageProps {
   profile: EmployeeProfile;
@@ -164,6 +165,26 @@ export default function AIAssistantPage({
     }
   }
 
+  async function handleExportChat() {
+    try {
+      const blob = await exportChat(idToken, messages);
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `DocuVault Chat Export ${stamp}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to export chat");
+    }
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header*/}
@@ -183,12 +204,21 @@ export default function AIAssistantPage({
             </div>
           </div>
           {messages.length > 0 && (
-            <button
-              onClick={onClearChat}
-              className="text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:border-red-300 hover:text-white-500 hover:bg-red-100 transition-colors cursor-pointer"
-            >
-              Clear chat
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportChat}
+                className="flex items-center gap-1 text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+              >
+                <Download size={12} aria-hidden="true" />
+                Export
+              </button>
+              <button
+                onClick={onClearChat}
+                className="text-xs text-slate-400 border border-slate-200 rounded-md px-2.5 py-1 hover:button-red-300 hover:text-white-500 hover:bg-red-100 transition-colors cursor-pointer"
+              >
+                Clear Chat
+              </button>
+            </div>
           )}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />

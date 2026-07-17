@@ -13,3 +13,4 @@ python-pptx
 bcrypt
 resend
 email-validator
+fpdf2

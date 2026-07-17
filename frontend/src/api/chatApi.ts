@@ -21,3 +21,26 @@ export async function askQuestion(
   });
   return handleResponse<{ answer: string }>(response);
 }
+
+export async function exportChat(
+  idToken: string,
+  messages: Message[],
+): Promise<Blob> {
+  const response = await fetch(`${getApiBaseUrl()}/chat/export`, {
+    method: "POST",
+    headers: {
+      ...authHeaders(idToken),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(
+      `${response.status}: ${body?.detail ?? response.statusText}`,
+    );
+  }
+  return response.blob();
+}
