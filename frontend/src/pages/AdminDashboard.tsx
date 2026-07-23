@@ -10,6 +10,7 @@ import {
   lockEmployee,
   unlockEmployee,
 } from "../api/adminApi";
+import AuditLogTab from "../components/admin/AuditLogTab";
 
 const ROLES = [
   { value: "employee", label: "Employee" },
@@ -22,6 +23,26 @@ const ROLE_LABELS: Record<string, string> = {
   manager: "Manager",
   system_admin: "System Administrator",
 };
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${status === "locked" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function OnboardingBadge({ complete }: { complete?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${complete ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-700"}`}
+    >
+      {complete ? "Complete" : "Pending"}
+    </span>
+  );
+}
 
 function generateTempPassword(): string {
   const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -77,6 +98,9 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
   const [editingEmail, setEditingEmail] = useState<string | null>(null);
   const [editDept, setEditDept] = useState("");
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"employees" | "audit-log">(
+    "employees",
+  );
 
   function setField<K extends keyof RegisterEmployeePayload>(
     key: K,
@@ -101,6 +125,7 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadEmployees();
   }, [idToken]);
 
@@ -185,359 +210,433 @@ export default function AdminDashboard({ idToken }: AdminDashboardProps) {
         </p>
       </div>
 
-      {/* Register Employee */}
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold text-slate-800">
-          Register Employee
-        </h2>
-        <form
-          onSubmit={handleRegister}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+      <div className="flex gap-1 border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("employees")}
+          className={`px-4 py-2 text-sm font-medium ${activeTab === "employees" ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
         >
-          <div>
-            <label
-              htmlFor="reg-name"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Full Name
-            </label>
-            <input
-              id="reg-name"
-              type="text"
-              required
-              value={form.name}
-              onChange={(e) => setField("name", e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="Muhd Ridwan"
-            />
-          </div>
+          Employees
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("audit-log")}
+          className={`px-4 py-2 text-sm font-medium ${activeTab === "audit-log" ? "border-b-2 border-indigo-600 text-indigo-700" : "text-slate-500 hover:text-slate-700"}`}
+        >
+          Audit Log
+        </button>
+      </div>
 
-          <div>
-            <label
-              htmlFor="reg-email"
-              className="mb-1 block text-sm font-medium text-slate-700"
+      {activeTab === "employees" && (
+        <>
+          {/* Register Employee */}
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-base font-semibold text-slate-800">
+              Register Employee
+            </h2>
+            <form
+              onSubmit={handleRegister}
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2"
             >
-              Work Email
-            </label>
-            <input
-              id="reg-email"
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setField("email", e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="user@yourcompany.com"
-            />
-          </div>
+              <div>
+                <label
+                  htmlFor="reg-name"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Full Name
+                </label>
+                <input
+                  id="reg-name"
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => setField("name", e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  placeholder="Muhd Ridwan"
+                />
+              </div>
 
-          <div>
-            <label
-              htmlFor="reg-dept"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Department
-            </label>
-            <input
-              id="reg-dept"
-              type="text"
-              required
-              value={form.department}
-              onChange={(e) => setField("department", e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="IT"
-            />
-          </div>
+              <div>
+                <label
+                  htmlFor="reg-email"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Work Email
+                </label>
+                <input
+                  id="reg-email"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  placeholder="user@yourcompany.com"
+                />
+              </div>
 
-          <div>
-            <label
-              htmlFor="reg-role"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Role
-            </label>
-            <select
-              id="reg-role"
-              required
-              value={form.role}
-              onChange={(e) => setField("role", e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div>
+                <label
+                  htmlFor="reg-dept"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Department
+                </label>
+                <input
+                  id="reg-dept"
+                  type="text"
+                  required
+                  value={form.department}
+                  onChange={(e) => setField("department", e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  placeholder="IT"
+                />
+              </div>
 
-          <div>
-            <label
-              htmlFor="reg-personal-email"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Personal Email
-            </label>
-            <input
-              id="reg-personal-email"
-              type="email"
-              required
-              value={form.personal_email}
-              onChange={(e) => setField("personal_email", e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-              placeholder="user@gmail.com"
-            />
-          </div>
+              <div>
+                <label
+                  htmlFor="reg-role"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Role
+                </label>
+                <select
+                  id="reg-role"
+                  required
+                  value={form.role}
+                  onChange={(e) => setField("role", e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                >
+                  {ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <label
-              htmlFor="reg-temp-password"
-              className="mb-1 block text-sm font-medium text-slate-700"
-            >
-              Temporary Password
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="reg-temp-password"
-                type="text"
-                readOnly
-                value={form.temp_password}
-                placeholder="Click Generate →"
-                className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm tracking-wider text-slate-700"
-              />
+              <div>
+                <label
+                  htmlFor="reg-personal-email"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Personal Email
+                </label>
+                <input
+                  id="reg-personal-email"
+                  type="email"
+                  required
+                  value={form.personal_email}
+                  onChange={(e) => setField("personal_email", e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  placeholder="user@gmail.com"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="reg-temp-password"
+                  className="mb-1 block text-sm font-medium text-slate-700"
+                >
+                  Temporary Password
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="reg-temp-password"
+                    type="text"
+                    readOnly
+                    value={form.temp_password}
+                    placeholder="Click Generate →"
+                    className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-sm tracking-wider text-slate-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setField("temp_password", generateTempPassword())
+                    }
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    Generate
+                  </button>
+                </div>
+              </div>
+
+              {registerError && (
+                <div className="sm:col-span-2">
+                  <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {registerError}
+                  </p>
+                </div>
+              )}
+
+              <div className="sm:col-span-2">
+                <button
+                  type="submit"
+                  disabled={isRegistering || !form.temp_password}
+                  className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isRegistering ? "Registering..." : "Register Employee"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          {/* Employee Table */}
+          <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-4 sm:px-6">
+              <h2 className="text-base font-semibold text-slate-800">
+                Employees
+              </h2>
               <button
                 type="button"
-                onClick={() =>
-                  setField("temp_password", generateTempPassword())
-                }
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                onClick={loadEmployees}
+                disabled={isLoadingEmployees}
+                className="flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
               >
-                Generate
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isLoadingEmployees ? "animate-spin" : ""}`}
+                />
+                Refresh
               </button>
             </div>
-          </div>
 
-          {registerError && (
-            <div className="sm:col-span-2">
-              <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
-                {registerError}
-              </p>
-            </div>
-          )}
-
-          <div className="sm:col-span-2">
-            <button
-              type="submit"
-              disabled={isRegistering || !form.temp_password}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isRegistering ? "Registering..." : "Register Employee"}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Employee Table */}
-      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-slate-800">Employees</h2>
-          <button
-            type="button"
-            onClick={loadEmployees}
-            disabled={isLoadingEmployees}
-            className="flex items-center gap-1.5 rounded-md border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${isLoadingEmployees ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
-        </div>
-
-        {loadError ? (
-          <div className="px-6 py-10 text-center">
-            <p className="text-sm text-red-600">{loadError}</p>
-            <button
-              type="button"
-              onClick={loadEmployees}
-              className="mt-3 text-sm font-medium text-slate-700 hover:underline"
-            >
-              Try again
-            </button>
-          </div>
-        ) : isLoadingEmployees ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Work Email</th>
-                  <th className="px-6 py-3 text-left">Department</th>
-                  <th className="px-6 py-3 text-left">Role</th>
-                  <th className="px-6 py-3 text-left">Status</th>
-                  <th className="px-6 py-3 text-left">Onboarding</th>
-                  <th className="px-6 py-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
+            {loadError ? (
+              <div className="px-6 py-10 text-center">
+                <p className="text-sm text-red-600">{loadError}</p>
+                <button
+                  type="button"
+                  onClick={loadEmployees}
+                  className="mt-3 text-sm font-medium text-slate-700 hover:underline"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : isLoadingEmployees ? (
+              <div className="divide-y divide-slate-50">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={i}>
-                    <td className="px-6 py-3">
+                  <div key={i} className="space-y-2 px-4 py-3 sm:px-6">
+                    <div className="flex items-center gap-3">
                       <Skeleton className="h-3.5 w-24" />
-                    </td>
-                    <td className="px-6 py-3">
                       <Skeleton className="h-3.5 w-36" />
-                    </td>
-                    <td className="px-6 py-3">
-                      <Skeleton className="h-3.5 w-20" />
-                    </td>
-                    <td className="px-6 py-3">
+                    </div>
+                    <div className="flex items-center gap-2">
                       <Skeleton className="h-3.5 w-16" />
-                    </td>
-                    <td className="px-6 py-3">
-                      <Skeleton className="h-3.5 w-14" />
-                    </td>
-                    <td className="px-6 py-3">
-                      <Skeleton className="h-3.5 w-14" />
-                    </td>
-                    <td className="px-6 py-3">
-                      <Skeleton className="h-3.5 w-10" />
-                    </td>
-                  </tr>
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        ) : employees.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-slate-400">
-            No employees yet.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  <th className="px-6 py-3 text-left">Name</th>
-                  <th className="px-6 py-3 text-left">Work Email</th>
-                  <th className="px-6 py-3 text-left">Department</th>
-                  <th className="px-6 py-3 text-left">Role</th>
-                  <th className="px-6 py-3 text-left">Status</th>
-                  <th className="px-6 py-3 text-left">Onboarding</th>
-                  <th className="px-6 py-3 text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="px-6 py-12 text-center text-sm text-slate-400">
+                No employees yet.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                <div className="hidden px-6 py-3 text-xs font-medium uppercase tracking-wide text-slate-500 lg:grid lg:grid-cols-12 lg:gap-4">
+                  <div className="col-span-2">Name</div>
+                  <div className="col-span-3">Work Email</div>
+                  <div className="col-span-2">Department</div>
+                  <div className="col-span-2">Role</div>
+                  <div className="col-span-1">Status</div>
+                  <div className="col-span-1">Onboarding</div>
+                  <div className="col-span-1">Actions</div>
+                </div>
+
                 {employees.map((emp) => (
-                  <tr key={emp.email} className="group hover:bg-slate-50">
-                    <td className="px-6 py-3 font-medium text-slate-800">
-                      {emp.name}
-                    </td>
-                    <td className="px-6 py-3 text-slate-600">{emp.email}</td>
-                    <td className="px-6 py-3">
-                      {editingEmail === emp.email ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={editDept}
-                            onChange={(e) => setEditDept(e.target.value)}
-                            className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleSaveDept(emp.email)}
-                            disabled={pendingEmail === emp.email}
-                            className="inline-flex items-center rounded-md border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
-                          >
-                            Save
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEditingEmail(null)}
-                            className="inline-flex items-center rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-50"
-                          >
-                            Cancel
-                          </button>
+                  <div key={emp.email} className="group hover:bg-slate-50">
+                    <div className="space-y-2 px-4 py-3 lg:hidden">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-slate-800">
+                            {emp.name}
+                          </p>
+                          <p className="truncate text-xs text-slate-500">
+                            {emp.email}
+                          </p>
                         </div>
-                      ) : (
                         <button
                           type="button"
-                          onClick={() => {
-                            setEditingEmail(emp.email);
-                            setEditDept(
-                              emp.department.replace(/\b\w/g, (c) =>
-                                c.toUpperCase(),
-                              ),
-                            );
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 -mx-2 text-left text-slate-600 hover:bg-slate-100 transition-colors"
-                          title="Click to edit"
+                          disabled={pendingEmail === emp.email}
+                          onClick={() => handleToggleLock(emp)}
+                          className={`inline-flex flex-shrink-0 items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                            emp.status === "locked"
+                              ? "border-green-200 text-green-700 hover:bg-green-50"
+                              : "border-red-200 text-red-600 hover:bg-red-50"
+                          }`}
                         >
-                          {emp.department.replace(/\b\w/g, (c) =>
-                            c.toUpperCase(),
+                          {pendingEmail === emp.email ? (
+                            "…"
+                          ) : emp.status === "locked" ? (
+                            <>
+                              <Unlock size={10} aria-hidden="true" /> Unlock
+                            </>
+                          ) : (
+                            <>
+                              <Lock size={10} aria-hidden="true" /> Lock
+                            </>
                           )}
-                          <Pencil
-                            size={11}
-                            className="opacity-0 group-hover:opacity-50 transition-opacity flex-shrink-0"
-                            aria-hidden="true"
-                          />
                         </button>
-                      )}
-                    </td>
-                    <td className="px-6 py-3 text-slate-600">
-                      {ROLE_LABELS[emp.role] ?? emp.role}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          emp.status === "locked"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          emp.onboarding_complete
-                            ? "bg-slate-100 text-slate-600"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {emp.onboarding_complete ? "Complete" : "Pending"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <button
-                        type="button"
-                        disabled={pendingEmail === emp.email}
-                        onClick={() => handleToggleLock(emp)}
-                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
-                          emp.status === "locked"
-                            ? "border-green-200 text-green-700 hover:bg-green-50"
-                            : "border-red-200 text-red-600 hover:bg-red-50"
-                        }`}
-                      >
-                        {pendingEmail === emp.email ? (
-                          "…"
-                        ) : emp.status === "locked" ? (
-                          <>
-                            <Unlock size={10} aria-hidden="true" /> Unlock
-                          </>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {editingEmail === emp.email ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editDept}
+                              onChange={(e) => setEditDept(e.target.value)}
+                              className="w-28 rounded-md border border-slate-300 px-2 py-1 text-xs focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveDept(emp.email)}
+                              disabled={pendingEmail === emp.email}
+                              className="inline-flex items-center rounded-md border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingEmail(null)}
+                              className="inline-flex items-center rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         ) : (
-                          <>
-                            <Lock size={10} aria-hidden="true" /> Lock
-                          </>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingEmail(emp.email);
+                              setEditDept(
+                                emp.department.replace(/\b\w/g, (c) =>
+                                  c.toUpperCase(),
+                                ),
+                              );
+                            }}
+                            className="-mx-1.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-slate-600 transition-colors hover:bg-slate-100"
+                          >
+                            {emp.department.replace(/\b\w/g, (c) =>
+                              c.toUpperCase(),
+                            )}
+                            <Pencil
+                              size={10}
+                              className="opacity-50"
+                              aria-hidden="true"
+                            />
+                          </button>
                         )}
-                      </button>
-                    </td>
-                  </tr>
+                        <span className="text-xs text-slate-500">
+                          {ROLE_LABELS[emp.role] ?? emp.role}
+                        </span>
+                        <StatusBadge status={emp.status} />
+                        <OnboardingBadge complete={emp.onboarding_complete} />
+                      </div>
+                    </div>
+
+                    {/* Grid row layout - lg breakpoint and up */}
+                    <div className="hidden px-6 py-3 lg:grid lg:grid-cols-12 lg:items-center lg:gap-4">
+                      <div className="col-span-2 truncate font-medium text-slate-800">
+                        {emp.name}
+                      </div>
+                      <div className="col-span-3 truncate text-slate-600">
+                        {emp.email}
+                      </div>
+                      <div className="col-span-2">
+                        {editingEmail === emp.email ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editDept}
+                              onChange={(e) => setEditDept(e.target.value)}
+                              className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveDept(emp.email)}
+                              disabled={pendingEmail === emp.email}
+                              className="inline-flex items-center rounded-md border border-indigo-200 px-2 py-0.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingEmail(null)}
+                              className="inline-flex items-center rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingEmail(emp.email);
+                              setEditDept(
+                                emp.department.replace(/\b\w/g, (c) =>
+                                  c.toUpperCase(),
+                                ),
+                              );
+                            }}
+                            className="-mx-2 inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-left text-slate-600 transition-colors hover:bg-slate-100"
+                            title="Click to edit"
+                          >
+                            {emp.department.replace(/\b\w/g, (c) =>
+                              c.toUpperCase(),
+                            )}
+                            <Pencil
+                              size={11}
+                              className="flex-shrink-0 opacity-0 transition-opacity group-hover:opacity-50"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        )}
+                      </div>
+                      <div className="col-span-2 truncate text-slate-600">
+                        {ROLE_LABELS[emp.role] ?? emp.role}
+                      </div>
+                      <div className="col-span-1">
+                        <StatusBadge status={emp.status} />
+                      </div>
+                      <div className="col-span-1">
+                        <OnboardingBadge complete={emp.onboarding_complete} />
+                      </div>
+                      <div className="col-span-1">
+                        <button
+                          type="button"
+                          disabled={pendingEmail === emp.email}
+                          onClick={() => handleToggleLock(emp)}
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                            emp.status === "locked"
+                              ? "border-green-200 text-green-700 hover:bg-green-50"
+                              : "border-red-200 text-red-600 hover:bg-red-50"
+                          }`}
+                        >
+                          {pendingEmail === emp.email ? (
+                            "…"
+                          ) : emp.status === "locked" ? (
+                            <>
+                              <Unlock size={10} aria-hidden="true" /> Unlock
+                            </>
+                          ) : (
+                            <>
+                              <Lock size={10} aria-hidden="true" /> Lock
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {activeTab === "audit-log" && (
+        <AuditLogTab idToken={idToken} employees={employees} />
+      )}
     </div>
   );
 }

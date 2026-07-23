@@ -26,6 +26,7 @@ from admin import router as admin_router
 from onboarding import router as onboarding_router
 from forgot_password import router as forgot_password_router
 from profile import router as profile_router
+from auth_routes import router as auth_router
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +47,14 @@ app.include_router(admin_router)
 app.include_router(onboarding_router)
 app.include_router(forgot_password_router)
 app.include_router(profile_router)
+app.include_router(auth_router)
+
 
 @app.get("/health")
 def health():
     """Unauthenticated liveness check."""
     return {"status": "ok"}
+
 
 @app.get("/me")
 def read_current_user(employee: dict = Depends(get_current_employee)):
@@ -60,7 +64,12 @@ def read_current_user(employee: dict = Depends(get_current_employee)):
     """
     return employee
 
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    logger.error("Unhandled exception on %s %s", request.method, request.url, exc_info=exc)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})# fresh deploy
+    logger.error(
+        "Unhandled exception on %s %s", request.method, request.url, exc_info=exc
+    )
+    return JSONResponse(
+        status_code=500, content={"detail": "Internal server error"}
+    )  # fresh deploy

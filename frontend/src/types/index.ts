@@ -121,3 +121,21 @@ export interface RegisterEmployeePayload {
   personal_email: string;
   temp_password: string;
 }
+
+export interface AuditLogEntry {
+  department: string;
+  log_id: string;
+  action: string;
+  actor_email: string;
+  timestamp: string;
+  target_type?: string;
+  target_id?: string;
+  target_name?: string;
+  details?: string;
+}
+
+export interface AuditLogResponse {
+  department: string | null;
+  action: string | null;
+  logs: AuditLogEntry[];
+}

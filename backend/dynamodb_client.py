@@ -51,6 +51,8 @@ def create_folder(
         "created_by": created_by,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    item["last_modified_by"] = created_by
+    item["last_modified_at"] = item["created_at"]
     if parent_folder_id:
         item["parent_folder_id"] = parent_folder_id
     _folders_table.put_item(Item=item)
@@ -82,15 +84,21 @@ def get_folders_by_department(
     return sorted(items, key=lambda x: x.get("name", "").lower())
 
 
-def rename_folder(department: str, folder_id: str, new_name: str) -> None:
+def rename_folder(
+    department: str, folder_id: str, new_name: str, modified_by: str
+) -> None:
     """
     Update folder display name. Not UUID
     """
     _folders_table.update_item(
         Key={"department": department, "folder_id": folder_id},
-        UpdateExpression="SET #n = :name",
+        UpdateExpression="SET #n = :name, last_modified_by = :mb, last_modified_at = :ma",
         ExpressionAttributeNames={"#n": "name"},
-        ExpressionAttributeValues={":name": new_name},
+        ExpressionAttributeValues={
+            ":name": new_name,
+            ":mb": modified_by,
+            ":ma": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
 
@@ -146,6 +154,8 @@ def create_document(
         "content_type": content_type,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
+    item["last_modified_by"] = uploaded_by
+    item["last_modified_at"] = item["uploaded_at"]
     if folder_id:
         item["folder_id"] = folder_id
     _documents_table.put_item(Item=item)
@@ -188,7 +198,9 @@ def get_document(department: str, file_id: str) -> dict | None:
     return response.get("Item")
 
 
-def rename_document(department: str, file_id: str, new_name: str) -> None:
+def rename_document(
+    department: str, file_id: str, new_name: str, modified_by: str
+) -> None:
     """
     Update a document name display name only
     """
@@ -197,8 +209,12 @@ def rename_document(department: str, file_id: str, new_name: str) -> None:
             "department": department,
             "file_id": file_id,
         },
-        UpdateExpression="SET display_name = :name",
-        ExpressionAttributeValues={":name": new_name},
+        UpdateExpression="SET display_name = :name, last_modified_by = :mb, last_modified_at = :ma",
+        ExpressionAttributeValues={
+            ":name": new_name,
+            ":mb": modified_by,
+            ":ma": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
 
@@ -345,14 +361,15 @@ def update_employee_profile(email: str, address: str, phone: str) -> None:
         ExpressionAttributeValues={":a": address, ":p": phone},
     )
 
+
 def create_audit_log_entry(
-        department: str,
-        action: str,
-        actor_email: str,
-        target_type: str | None = None,
-        target_id: str | None = None,
-        target_name: str | None = None,
-        details: str | None = None,
+    department: str,
+    action: str,
+    actor_email: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    target_name: str | None = None,
+    details: str | None = None,
 ) -> dict:
     """
     Append an audit log entry.
@@ -376,17 +393,18 @@ def create_audit_log_entry(
     _audit_log_table.put_item(Item=item)
     return item
 
+
 def get_audit_logs(
-        department: str | None = None, action: str | None = None, limit: int = 200
+    department: str | None = None, action: str | None = None, limit: int = 200
 ) -> list[dict]:
     """
     Return audit log entries, newest first.
     """
     if department:
         response = _audit_log_table.query(
-            KeyConditionExpression = "department = :dept",
-            ExpressionAttributeValues = {":dept": department},
-            ScanIndexForward = False,
+            KeyConditionExpression="department = :dept",
+            ExpressionAttributeValues={":dept": department},
+            ScanIndexForward=False,
         )
         items = response.get("Items", [])
     else:

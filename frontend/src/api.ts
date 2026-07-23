@@ -26,3 +26,22 @@ export async function fetchCurrentEmployee(
   }
   return response.json();
 }
+
+/**
+ * Calls the api to record a login event in audit log
+ * The error will be ignored / swallowed to prevent from login fails
+ */
+export async function logLogin(idToken: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/log-login`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    const detail = body?.detail ?? response.statusText;
+    console.warn(`Failed to record login (${response.status}): ${detail}`);
+  }
+}
