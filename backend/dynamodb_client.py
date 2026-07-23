@@ -7,6 +7,7 @@ Cognito owns authentication entirely.
 """
 
 import boto3
+import uuid
 import config
 from datetime import datetime, timezone
 
@@ -14,6 +15,7 @@ _dynamodb = boto3.resource("dynamodb", region_name=config.AWS_REGION)
 _employees_table = _dynamodb.Table(config.DYNAMODB_EMPLOYEES_TABLE)
 _folders_table = _dynamodb.Table(config.DYNAMODB_FOLDERS_TABLE)
 _documents_table = _dynamodb.Table(config.DYNAMODB_DOCUMENTS_TABLE)
+_audit_log_table = _dynamodb.Table(config.DYNAMODB_AUDIT_LOG_TABLE)
 
 # EMPLOYEES
 
@@ -342,3 +344,57 @@ def update_employee_profile(email: str, address: str, phone: str) -> None:
         UpdateExpression="SET address = :a, phone = :p",
         ExpressionAttributeValues={":a": address, ":p": phone},
     )
+
+def create_audit_log_entry(
+        department: str,
+        action: str,
+        actor_email: str,
+        target_type: str | None = None,
+        target_id: str | None = None,
+        target_name: str | None = None,
+        details: str | None = None,
+) -> dict:
+    """
+    Append an audit log entry.
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    item = {
+        "department": department,
+        "log_id": f"{timestamp}#{uuid.uuid4()}",
+        "action": action,
+        "actor_email": actor_email,
+        "timestamp": timestamp,
+    }
+    if target_type:
+        item["target_type"] = target_type
+    if target_id:
+        item["target_id"] = target_id
+    if target_name:
+        item["target_name"] = target_name
+    if details:
+        item["details"] = details
+    _audit_log_table.put_item(Item=item)
+    return item
+
+def get_audit_logs(
+        department: str | None = None, action: str | None = None, limit: int = 200
+) -> list[dict]:
+    """
+    Return audit log entries, newest first.
+    """
+    if department:
+        response = _audit_log_table.query(
+            KeyConditionExpression = "department = :dept",
+            ExpressionAttributeValues = {":dept": department},
+            ScanIndexForward = False,
+        )
+        items = response.get("Items", [])
+    else:
+        response = _audit_log_table.scan()
+        items = response.get("Items", [])
+        items.sort(key=lambda x: x["log_id"], reverse=True)
+
+    if action:
+        items = [item for item in items if item.get("action") == action]
+
+    return items[:limit]
