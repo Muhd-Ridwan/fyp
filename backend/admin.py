@@ -3,7 +3,7 @@ import logging
 import boto3
 import config
 from botocore.exceptions import ClientError
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, EmailStr
 from dependencies import get_current_employee
 from dynamodb_client import (
@@ -13,6 +13,7 @@ from dynamodb_client import (
     get_employee_by_email,
     update_employee_department,
     set_employee_status,
+    get_audit_logs,
 )
 
 router = APIRouter(prefix="/admin")
@@ -194,3 +195,22 @@ def unlock_employee(email: str, _: dict = Depends(require_admin)):
             detail="Account unlocked in Cognito but failed to update status",
         )
     return {"message": "Employee unlocked"}
+
+
+@router.get("/audit-log")
+def list_audit_log(
+    department: str | None = Query(default=None),
+    action: str | None = Query(default=None),
+    limit: int = Query(default=200, le=1000),
+    _: dict = Depends(require_admin),
+):
+    """
+    Full audit log, admin only can view.
+    """
+    dept = department.lower().strip() if department else None
+    try:
+        logs = get_audit_logs(department=dept, action=action, limit=limit)
+    except ClientError as e:
+        logger.error("DynamoDB get audit logs failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=503, detail="Failed to retrieve audit log")
+    return {"department": dept, "action": action, "logs": logs}

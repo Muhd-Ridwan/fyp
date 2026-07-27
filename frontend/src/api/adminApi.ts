@@ -1,4 +1,8 @@
-import type { Employee, RegisterEmployeePayload } from "../types";
+import type {
+  Employee,
+  RegisterEmployeePayload,
+  AuditLogResponse,
+} from "../types";
 import { getApiBaseUrl, authHeaders, handleResponse } from "./utils";
 
 export async function getEmployees(idToken: string): Promise<Employee[]> {
@@ -56,4 +60,19 @@ export async function unlockEmployee(
     { method: "POST", headers: authHeaders(idToken) },
   );
   return handleResponse(response);
+}
+
+export async function getAuditLog(
+  idToken: string,
+  filters: { department?: string; action?: string } = {},
+): Promise<AuditLogResponse> {
+  const params = new URLSearchParams();
+  if (filters.department) params.set("department", filters.department);
+  if (filters.action) params.set("action", filters.action);
+  const query = params.toString();
+  const response = await fetch(
+    `${getApiBaseUrl()}/admin/audit-log${query ? `?${query}` : ""}`,
+    { headers: authHeaders(idToken) },
+  );
+  return handleResponse<AuditLogResponse>(response);
 }

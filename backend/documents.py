@@ -106,6 +106,18 @@ async def upload_document(
         raise HTTPException(status_code=503, detail="Failed to save file record")
 
     try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="upload",
+            actor_email=employee["email"],
+            target_type="document",
+            target_id=file_id,
+            target_name=display_name,
+        )
+    except ClientError as e:
+        logger.error("Audit log failed for upload %s: %s", file_id, e, exc_info=True)
+
+    try:
         await asyncio.to_thread(
             index_document, file_bytes, display_name, file_id, department
         )
@@ -172,6 +184,18 @@ def download_document(
             "S3 presign failed for %s: %s", document["s3_key"], e, exc_info=True
         )
         raise HTTPException(status_code=503, detail="Failed to generate download link")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="download",
+            actor_email=employee["email"],
+            target_type="document",
+            target_id=file_id,
+            target_name=document["display_name"],
+        )
+    except ClientError as e:
+        logger.error("Audit log failed for download %s: %s", file_id, e, exc_info=True)
 
     return {
         "file_id": file_id,
@@ -274,12 +298,27 @@ def rename_document(
         raise HTTPException(status_code=404, detail="File not found")
 
     try:
-        dynamodb_client.rename_document(department, file_id, name)
+        dynamodb_client.rename_document(
+            department, file_id, name, modified_by=employee["email"]
+        )
     except ClientError as e:
         logger.error(
             "DynamoDB rename_document failed for %s: %s", file_id, e, exc_info=True
         )
         raise HTTPException(status_code=503, detail="Failed to rename file")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="rename",
+            actor_email=employee["email"],
+            target_type="document",
+            target_id=file_id,
+            target_name=name,
+            details=f"Renamed from '{document['display_name']}'",
+        )
+    except ClientError as e:
+        logger.error("Audit log failed for rename %s: %s", file_id, e, exc_info=True)
 
     return {"file_id": file_id, "display_name": name}
 
@@ -332,6 +371,20 @@ def move_items(
         logger.error("Move failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to move item(s)")
 
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="move",
+            actor_email=employee["email"],
+            target_type="mixed",
+            details=(
+                f"moved {len(body.file_ids)} file(s), {len(body.folder_ids)} "
+                f"folder(s) to {destination or 'root'}"
+            ),
+        )
+    except ClientError as e:
+        logger.error("Audit log failed for move: %s", e, exc_info=True)
+
     return {
         "moved_files": len(body.file_ids),
         "moved_folders": len(body.folder_ids),
@@ -378,5 +431,17 @@ def delete_document(
             "DyanmoDB delete_document failed for %s: %s", file_id, e, exc_info=True
         )
         raise HTTPException(status_code=503, detail="Failed to delete file record")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="delete",
+            actor_email=employee["email"],
+            target_type="document",
+            target_id=file_id,
+            target_name=document["display_name"],
+        )
+    except ClientError as e:
+        logger.error("Audit log failed for delete %s: %s", file_id, e, exc_info=True)
 
     return {"file_id": file_id, "deleted": True}

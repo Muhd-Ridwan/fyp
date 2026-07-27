@@ -7,6 +7,7 @@ Cognito owns authentication entirely.
 """
 
 import boto3
+import uuid
 import config
 from datetime import datetime, timezone
 
@@ -14,6 +15,7 @@ _dynamodb = boto3.resource("dynamodb", region_name=config.AWS_REGION)
 _employees_table = _dynamodb.Table(config.DYNAMODB_EMPLOYEES_TABLE)
 _folders_table = _dynamodb.Table(config.DYNAMODB_FOLDERS_TABLE)
 _documents_table = _dynamodb.Table(config.DYNAMODB_DOCUMENTS_TABLE)
+_audit_log_table = _dynamodb.Table(config.DYNAMODB_AUDIT_LOG_TABLE)
 
 # EMPLOYEES
 
@@ -49,6 +51,8 @@ def create_folder(
         "created_by": created_by,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    item["last_modified_by"] = created_by
+    item["last_modified_at"] = item["created_at"]
     if parent_folder_id:
         item["parent_folder_id"] = parent_folder_id
     _folders_table.put_item(Item=item)
@@ -80,15 +84,21 @@ def get_folders_by_department(
     return sorted(items, key=lambda x: x.get("name", "").lower())
 
 
-def rename_folder(department: str, folder_id: str, new_name: str) -> None:
+def rename_folder(
+    department: str, folder_id: str, new_name: str, modified_by: str
+) -> None:
     """
     Update folder display name. Not UUID
     """
     _folders_table.update_item(
         Key={"department": department, "folder_id": folder_id},
-        UpdateExpression="SET #n = :name",
+        UpdateExpression="SET #n = :name, last_modified_by = :mb, last_modified_at = :ma",
         ExpressionAttributeNames={"#n": "name"},
-        ExpressionAttributeValues={":name": new_name},
+        ExpressionAttributeValues={
+            ":name": new_name,
+            ":mb": modified_by,
+            ":ma": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
 
@@ -144,6 +154,8 @@ def create_document(
         "content_type": content_type,
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
+    item["last_modified_by"] = uploaded_by
+    item["last_modified_at"] = item["uploaded_at"]
     if folder_id:
         item["folder_id"] = folder_id
     _documents_table.put_item(Item=item)
@@ -186,7 +198,9 @@ def get_document(department: str, file_id: str) -> dict | None:
     return response.get("Item")
 
 
-def rename_document(department: str, file_id: str, new_name: str) -> None:
+def rename_document(
+    department: str, file_id: str, new_name: str, modified_by: str
+) -> None:
     """
     Update a document name display name only
     """
@@ -195,8 +209,12 @@ def rename_document(department: str, file_id: str, new_name: str) -> None:
             "department": department,
             "file_id": file_id,
         },
-        UpdateExpression="SET display_name = :name",
-        ExpressionAttributeValues={":name": new_name},
+        UpdateExpression="SET display_name = :name, last_modified_by = :mb, last_modified_at = :ma",
+        ExpressionAttributeValues={
+            ":name": new_name,
+            ":mb": modified_by,
+            ":ma": datetime.now(timezone.utc).isoformat(),
+        },
     )
 
 
@@ -342,3 +360,59 @@ def update_employee_profile(email: str, address: str, phone: str) -> None:
         UpdateExpression="SET address = :a, phone = :p",
         ExpressionAttributeValues={":a": address, ":p": phone},
     )
+
+
+def create_audit_log_entry(
+    department: str,
+    action: str,
+    actor_email: str,
+    target_type: str | None = None,
+    target_id: str | None = None,
+    target_name: str | None = None,
+    details: str | None = None,
+) -> dict:
+    """
+    Append an audit log entry.
+    """
+    timestamp = datetime.now(timezone.utc).isoformat()
+    item = {
+        "department": department,
+        "log_id": f"{timestamp}#{uuid.uuid4()}",
+        "action": action,
+        "actor_email": actor_email,
+        "timestamp": timestamp,
+    }
+    if target_type:
+        item["target_type"] = target_type
+    if target_id:
+        item["target_id"] = target_id
+    if target_name:
+        item["target_name"] = target_name
+    if details:
+        item["details"] = details
+    _audit_log_table.put_item(Item=item)
+    return item
+
+
+def get_audit_logs(
+    department: str | None = None, action: str | None = None, limit: int = 200
+) -> list[dict]:
+    """
+    Return audit log entries, newest first.
+    """
+    if department:
+        response = _audit_log_table.query(
+            KeyConditionExpression="department = :dept",
+            ExpressionAttributeValues={":dept": department},
+            ScanIndexForward=False,
+        )
+        items = response.get("Items", [])
+    else:
+        response = _audit_log_table.scan()
+        items = response.get("Items", [])
+        items.sort(key=lambda x: x["log_id"], reverse=True)
+
+    if action:
+        items = [item for item in items if item.get("action") == action]
+
+    return items[:limit]

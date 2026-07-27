@@ -11,7 +11,7 @@ import {
   type AuthTokens,
   type LoginResult,
 } from "./authClient";
-import { fetchCurrentEmployee } from "../api";
+import { fetchCurrentEmployee, logLogin } from "../api";
 import type { EmployeeProfile } from "../types";
 
 export interface AuthContextValue {
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const employeeProfile = await fetchCurrentEmployee(result.tokens.idToken);
     setTokens(result.tokens);
     setProfile(employeeProfile);
+    void logLogin(result.tokens.idToken);
   }
 
   async function finalizeSession(newTokens: AuthTokens) {
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokens(newTokens);
     setProfile(employeeProfile);
     setRequiresOnboarding(false);
+    void logLogin(newTokens.idToken);
   }
 
   function logout() {

@@ -60,6 +60,20 @@ def create_folder(
     except ClientError as e:
         logger.error("Dynamo DB create folder failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to create folder")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="create_folder",
+            actor_email=employee["email"],
+            target_type="folder",
+            target_id=folder_id,
+            target_name=name,
+        )
+    except ClientError as e:
+        logger.error(
+            "Audit log failed for create folder %s: %s", folder_id, e, exc_info=True
+        )
     return folder
 
 
@@ -98,10 +112,27 @@ def rename_folder(
     if not name:
         raise HTTPException(status_code=400, detail="FOlder name cannot be empty")
     try:
-        dynamodb_client.rename_folder(department, folder_id, name)
+        dynamodb_client.rename_folder(
+            department, folder_id, name, modified_by=employee["email"]
+        )
     except ClientError as e:
         logger.error("DynamoDB rename folder failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to rename folder")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="rename_folder",
+            actor_email=employee["email"],
+            target_type="folder",
+            target_id=folder_id,
+            target_name=name,
+        )
+    except ClientError as e:
+        logger.error(
+            "Audit log failed for rename folder %s: %s", folder_id, e, exc_info=True
+        )
+
     return {"folder_id": folder_id, "name": name}
 
 
@@ -120,6 +151,7 @@ def delete_folder(
         4. Delete folder record itself
     """
     department = employee["department"]
+    files_deleted = 0
     try:
         all_folder_ids = [folder_id] + dynamodb_client.get_all_subfolder_ids(
             department, folder_id
@@ -133,6 +165,7 @@ def delete_folder(
                 delete_document_vectors(file["file_id"], department)
                 s3_client.delete_file_by_key(file["s3_key"])
                 dynamodb_client.delete_document(department, file["file_id"])
+                files_deleted += 1
 
         for fid in reversed(all_folder_ids):
             dynamodb_client.delete_folder(department, fid)
@@ -145,6 +178,20 @@ def delete_folder(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail="Failed to delete folder")
+
+    try:
+        dynamodb_client.create_audit_log_entry(
+            department=department,
+            action="delete_folder",
+            actor_email=employee["email"],
+            target_type="folder",
+            target_id=folder_id,
+            details=f"deleted {len(all_folder_ids)} folder(s) and {files_deleted} file(s)",
+        )
+    except ClientError as e:
+        logger.error(
+            "Audit log failed for delete folder %s: %s", folder_id, e, exc_info=True
+        )
 
     return {
         "folder_id": folder_id,
