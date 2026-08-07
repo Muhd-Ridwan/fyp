@@ -265,6 +265,26 @@ def get_all_employees() -> list[dict]:
     return response.get("Items", [])
 
 
+def get_employee_names(emails: set[str]) -> dict[str, str]:
+    """
+    Resolve set of employee emails to display names via a single batched lookup.
+    Missing entry will be null for the display and fallback to the raw email if any
+    """
+    if not emails:
+        return {}
+    response = _dynamodb.batch_get_item(
+        RequestItems={
+            config.DYNAMODB_EMPLOYEES_TABLE: {
+                "Keys": [{"email": email} for email in emails],
+                "ProjectionExpression": "email, #n",
+                "ExpressionAttributeNames": {"#n": "name"},
+            }
+        }
+    )
+    items = response.get("Responses", {}).get(config.DYNAMODB_EMPLOYEES_TABLE, [])
+    return {item["email"]: item["name"] for item in items}
+
+
 def create_employee(
     email: str, name: str, department: str, role: str, personal_email: str
 ) -> None:

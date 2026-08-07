@@ -156,6 +156,18 @@ def list_documents(
         logger.error("DynamoDB get documents failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to retrieve documents")
 
+    try:
+        uploader_emails = {f["uploaded_by"] for f in files if f.get("uploaded_by")}
+        names = dynamodb_client.get_employee_names(uploader_emails)
+        for f in files:
+            f["uploaded_by_name"] = names.get(
+                f.get("uploaded_by"), f.get("uploaded_by")
+            )
+    except ClientError as e:
+        logger.error("DynamoDB resolve uploader names failed: %s", e, exc_info=True)
+        for f in files:
+            f["uploaded_by_name"] = f.get("uploaded_by")
+
     return {"department": department, "folder_id": folder_id, "files": files}
 
 

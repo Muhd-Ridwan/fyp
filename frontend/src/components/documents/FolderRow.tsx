@@ -91,6 +91,9 @@ export default function FolderRow({
           Folder &middot; {formatDate(folder.created_at)}
         </p>
       </div>
+      <div className="hidden sm:block text-xs text-slate-400 flex-shrink-0 max-w-[140px] truncate">
+        {folder.created_by_name}
+      </div>
       <ContextMenu items={menuItems} ref={menuRef} />
     </div>
   );

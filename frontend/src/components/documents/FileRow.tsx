@@ -197,6 +197,9 @@ export default function FileRow({
           {formatDate(document.uploaded_at)}
         </p>
       </div>
+      <div className="hidden sm:block text-xs text-slate-400 flex-shrink-0 max-w-[140px] truncate">
+        {document.uploaded_by_name}
+      </div>
       <ContextMenu items={menuItems} ref={menuRef} />
     </div>
   );

@@ -94,6 +94,16 @@ def list_folders(
     except ClientError as e:
         logger.error("Dynamo DB get folder failed: %s", e, exc_info=True)
         raise HTTPException(status_code=503, detail="Failed to retrieve folders")
+
+    try:
+        creator_emails = {f["created_by"] for f in folders if f.get("created_by")}
+        names = dynamodb_client.get_employee_names(creator_emails)
+        for f in folders:
+            f["created_by_name"] = names.get(f.get("created_by"), f.get("created_by"))
+    except ClientError as e:
+        logger.error("Dynamo DB resolve creator names failed: %s", e, exc_info=True)
+        for f in folders:
+            f["created_by_name"] = f.get("created_by")
     return {"department": department, "folders": folders}
 
 

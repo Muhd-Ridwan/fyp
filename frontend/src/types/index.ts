@@ -15,6 +15,7 @@ export interface Folder {
   name: string;
   department: string;
   created_by: string;
+  created_by_name: string;
   created_at: string;
   parent_folder_id?: string;
 }
@@ -26,6 +27,7 @@ export interface Document {
   department: string;
   folder_id?: string;
   uploaded_by: string;
+  uploaded_by_name: string;
   uploaded_at: string;
   file_size: number;
   content_type: string;
