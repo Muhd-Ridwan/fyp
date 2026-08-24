@@ -17,6 +17,7 @@ import type {
   ActiveFileContext,
   PendingSummarize,
 } from "../types";
+import OverviewPage from "./OverviewPage";
 
 const CHAT_STORAGE_KEY = "docuvault_chat_messages";
 const ACTIVE_FILE_STORAGE_KEY = "docuvault_chat_active_file";
@@ -88,6 +89,9 @@ export default function Dashboard() {
           onAskAI={handleAskAI}
           onSummarize={handleSummarize}
         />
+      )}
+      {currentView === "overview" && (
+        <OverviewPage profile={profile} idToken={tokens.idToken} />
       )}
       {currentView === "ai" && (
         <AIAssistantPage

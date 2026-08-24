@@ -642,6 +642,12 @@ export default function DocumentsPage({
               ? renameTarget.item.name
               : renameTarget.item.display_name
           }
+          extension={
+            renameTarget.type === "file" &&
+            renameTarget.item.display_name.includes(".")
+              ? `.${renameTarget.item.display_name.split(".").pop()}`
+              : undefined
+          }
           onConfirm={handleRenameConfirm}
           onClose={() => setRenameTarget(null)}
         />

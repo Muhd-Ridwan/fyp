@@ -141,3 +141,39 @@ export interface AuditLogResponse {
   action: string | null;
   logs: AuditLogEntry[];
 }
+
+export interface FileTypeStat {
+  extension: string;
+  count: number;
+  percent: number;
+}
+
+export interface RecentUpload {
+  file_id: string;
+  display_name: string;
+  uploaded_at: string;
+}
+
+export interface LargestFile {
+  file_id: string;
+  display_name: string;
+  file_size: number;
+}
+
+export interface BusiestFolder {
+  folder_id: string;
+  name: string;
+  file_count: number;
+}
+
+export interface OverviewResponse {
+  department: string;
+  total_documents: number;
+  total_folders: number;
+  total_storage_bytes: number;
+  uploaded_this_week: number;
+  file_types: FileTypeStat[];
+  recent_uploads: RecentUpload[];
+  largest_files: LargestFile[];
+  busiest_folders: BusiestFolder[];
+}

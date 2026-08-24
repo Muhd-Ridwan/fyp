@@ -28,6 +28,20 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 logger = logging.getLogger(__name__)
 
 
+CONTENT_TYPE_EXTENSIONS: dict[str, str] = {
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "text/csv": ".csv",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "text/plain": ".txt",
+}
+
+
 class RenameDocumentRequest(BaseModel):
     name: str
 
@@ -295,42 +309,42 @@ def rename_document(
     employee: dict = Depends(get_current_employee),
 ):
     """
-    Rename a doc display name
+    Rename a doc's display name. The extension is derived from the file's
+    stored content_type and always re-applied - whatever extension the
+    caller submits (or omits) is discarded, so a rename can never desync
+    the display name from the file's real type.
     """
     department = employee["department"]
     if not department:
         raise HTTPException(status_code=403, detail="Noe dept assigned to this acc.")
 
-    name = body.name.strip()
-    if not name:
+    raw_name = body.name.strip()
+    if not raw_name:
         raise HTTPException(status_code=400, detail="File name cannot empty")
 
     document = dynamodb_client.get_document(department, file_id)
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
 
+    base_name = raw_name.rsplit(".", 1)[0] if "." in raw_name else raw_name
+    base_name = base_name.strip()
+    if not base_name:
+        raise HTTPException(status_code=400, detail="File name cannot be empty")
+
+    extension = CONTENT_TYPE_EXTENSIONS.get(document["content_type"])
+    if extension is None:
+        current_name = document["display_name"]
+        extension = f".{current_name.rsplit('.', 1)[-1]}" if "." in current_name else ""
+
+    name = f"{base_name}{extension}"
+
     try:
-        dynamodb_client.rename_document(
-            department, file_id, name, modified_by=employee["email"]
-        )
+        dynamodb_client.rename_document(department, file_id, name)
     except ClientError as e:
         logger.error(
             "DynamoDB rename_document failed for %s: %s", file_id, e, exc_info=True
         )
         raise HTTPException(status_code=503, detail="Failed to rename file")
-
-    try:
-        dynamodb_client.create_audit_log_entry(
-            department=department,
-            action="rename",
-            actor_email=employee["email"],
-            target_type="document",
-            target_id=file_id,
-            target_name=name,
-            details=f"Renamed from '{document['display_name']}'",
-        )
-    except ClientError as e:
-        logger.error("Audit log failed for rename %s: %s", file_id, e, exc_info=True)
 
     return {"file_id": file_id, "display_name": name}
 

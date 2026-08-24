@@ -27,6 +27,7 @@ from onboarding import router as onboarding_router
 from forgot_password import router as forgot_password_router
 from profile import router as profile_router
 from auth_routes import router as auth_router
+from overview import router as overview_router
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ app.include_router(onboarding_router)
 app.include_router(forgot_password_router)
 app.include_router(profile_router)
 app.include_router(auth_router)
+app.include_router(overview_router)
 
 
 @app.get("/health")

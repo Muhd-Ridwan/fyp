@@ -9,6 +9,7 @@ import { Pencil } from "lucide-react";
 interface RenameModalProps {
   title?: string;
   currentName: string;
+  extension?: string;
   onConfirm: (newName: string) => void;
   onClose: () => void;
 }
@@ -16,15 +17,20 @@ interface RenameModalProps {
 export default function RenameModal({
   title = "Rename",
   currentName,
+  extension,
   onConfirm,
   onClose,
 }: RenameModalProps) {
-  const [name, setName] = useState(currentName);
-  const isValid = name.trim().length > 0 && name.trim() !== currentName;
+  const baseName =
+    extension && currentName.endsWith(extension)
+      ? currentName.slice(0, -extension.length)
+      : currentName;
+  const [name, setName] = useState(baseName);
+  const isValid = name.trim().length > 0 && name.trim() !== baseName;
 
   function handleConfirm() {
     if (!isValid) return;
-    onConfirm(name.trim());
+    onConfirm(extension ? `${name.trim()}${extension}` : name.trim());
   }
 
   return (
@@ -53,17 +59,24 @@ export default function RenameModal({
           {title}
         </h2>
         <p className="text-sm text-slate-500 mb-4">Enter a new name below</p>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleConfirm();
-            if (e.key === "Escape") onClose();
-          }}
-          autoFocus
-          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-900 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
-        />
+        <div className="flex items-center gap-1 mb-4">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleConfirm();
+              if (e.key === "Escape") onClose();
+            }}
+            autoFocus
+            className="flex-1 min-w-0 px-3 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition-colors"
+          />
+          {extension && (
+            <span className="text-sm text-slate-400 flex-shrink-0 pr-1">
+              {extension}
+            </span>
+          )}
+        </div>
 
         <div className="flex gap-2 justify-end">
           <button

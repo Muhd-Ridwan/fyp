@@ -6,6 +6,7 @@
 
 import {
   FolderLock,
+  LayoutDashboard,
   Folder,
   MessageSquare,
   LogOut,
@@ -17,7 +18,7 @@ import {
 import type { EmployeeProfile } from "../../types";
 import DeptBadge from "../ui/DeptBadge";
 
-export type AppView = "documents" | "ai" | "profile" | "admin";
+export type AppView = "overview" | "documents" | "ai" | "profile" | "admin";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -159,6 +160,13 @@ export default function Sidebar({
         <nav
           className={`flex-1 py-3 space-y-0.5 ${showCollapsed ? "px-2" : "px-3"}`}
         >
+          <NavItem
+            icon={<LayoutDashboard size={16} />}
+            label="Overview"
+            active={currentView === "overview"}
+            collapsed={showCollapsed}
+            onClick={() => handleViewChange("overview")}
+          />
           <NavItem
             icon={<Folder size={16} />}
             label="Documents"
