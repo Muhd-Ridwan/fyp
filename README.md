@@ -1,18 +1,23 @@
 # DocuVault AI
 
-A department-scoped cloud document management system built as a Final Year Project. Employees can upload, organise, and query documents within their own department. An AI assistant powered by a **Retrieval-Augmented Generation (RAG)** pipeline answers questions grounded strictly in that department's documents.
+A department-scoped cloud document management system built as a Final Year Project. Employees can upload, organise, search, and query documents within their own department. An AI assistant powered by a **Retrieval-Augmented Generation (RAG)** pipeline answers questions grounded strictly in that department's documents.
 
 ---
 
 ## Features
 
-- **Department isolation** — employees can only see files belonging to their own department
-- **Folder & file management** — create folders, upload documents, rename, and delete
-- **AI Assistant** — ask natural-language questions; answers are sourced from your department's documents with source citations
+- **Department isolation** — employees can only see files belonging to their own department, enforced at the API layer
+- **Folder & file management** — create folders, upload, rename, move (with cycle detection), download, and delete
+- **Search** — search across documents and folders within your department
+- **Overview dashboard** — department-level stats: document/folder counts, storage used, file-type breakdown, busiest folders, recently uploaded and largest files
+- **AI Assistant** — ask natural-language questions grounded in your department's documents, with source citations; supports multi-turn conversation (follow-up questions are automatically rewritten into standalone queries) and per-document summarization
+- **Chat export & clear** — export a conversation to PDF (rendered server-side) or clear the current chat
 - **Admin panel** — system admins can register employees, reassign departments, and lock/unlock accounts
+- **Audit log** — admins can view a filterable log of key actions (by department and action type)
 - **First-login onboarding** — employees set their password and verify identity via NRIC on first login
 - **Forgot password** — self-service password reset via Resend transactional email
-- **Supported file types** — PDF, DOCX, XLSX, PPTX, CSV, PNG, JPG/JPEG
+- **Profile management** — employees can update their address and phone number
+- **Supported file types** — PDF, DOCX, XLSX, PPTX, CSV, TXT, PNG, JPG/JPEG (images processed via OCR)
 
 ---
 
@@ -22,14 +27,17 @@ A department-scoped cloud document management system built as a Final Year Proje
 |---|---|
 | Frontend | React 19, TypeScript, Vite, Tailwind CSS v4 |
 | Backend | FastAPI (Python 3.12), Uvicorn |
-| Authentication | AWS Cognito (User Pool + App Client) |
+| Authentication | AWS Cognito (User Pool + App Client), custom JWT verification (JWKS-based) |
 | Storage | AWS S3 |
-| Database | AWS DynamoDB (Employees, Folders, Documents tables) |
+| Database | AWS DynamoDB (Employees, Folders, Documents, AuditLog tables) |
 | Vector Database | Pinecone Serverless (1024-dim index, top-k 10 chunks retrieved per query) |
 | Embeddings | AWS Bedrock — Amazon Titan Embeddings V2 |
 | AI Generation | AWS Bedrock — Claude Haiku 4.5 |
+| OCR (image text extraction) | AWS Textract |
+| Charts | Recharts |
+| Markdown rendering | react-markdown + remark-gfm |
 | Email | Resend |
-| Deployment | AWS Elastic Beanstalk (backend) via GitHub Actions CI/CD |
+| Deployment | AWS Elastic Beanstalk (backend) + Cloudflare (frontend + TLS proxy), via GitHub Actions CI/CD |
 
 ---
 <p>Login Page</p>
@@ -51,16 +59,20 @@ Browser (React + Vite)
 FastAPI (AWS Elastic Beanstalk)
     ├── auth.py          — verifies Cognito JWT locally (JWKS cached 1 hr)
     ├── dependencies.py  — resolves employee profile from DynamoDB
-    ├── documents.py     — S3 upload/download/delete + RAG indexing
+    ├── documents.py     — S3 upload/download/rename/move/delete + RAG indexing + summarize
     ├── folders.py       — folder CRUD in DynamoDB
-    ├── chat.py          — RAG query endpoint
-    ├── admin.py         — employee management (Cognito + DynamoDB + Resend)
+    ├── chat.py          — RAG query endpoint + chat PDF export
+    ├── overview.py       — department dashboard stats
+    ├── admin.py          — employee management (Cognito + DynamoDB + Resend) + audit log
     ├── onboarding.py    — first-login NRIC verification
-    └── profile.py       — employee profile reads
+    ├── forgot_password.py — self-service reset flow
+    ├── profile.py       — employee profile read/update
+    └── auth_routes.py   — login event logging
          │
          ├── AWS S3          (file storage)
-         ├── AWS DynamoDB    (metadata)
+         ├── AWS DynamoDB    (metadata: employees, folders, documents, audit log)
          ├── AWS Cognito     (identity)
+         ├── AWS Textract    (OCR for image uploads)
          ├── Pinecone        (vector search)
          └── AWS Bedrock     (embeddings + generation)
 ```
@@ -69,7 +81,7 @@ FastAPI (AWS Elastic Beanstalk)
 
 ## Authentication & Sign-in Flow
 
-1. **Admin registers an employee** via the Admin Panel — this creates a Cognito account with a temporary password and sends the credentials to the employee's personal email (via Resend).
+1. **Admin registers an employee** via the Admin Panel — this creates a Cognito account with a temporary password and sends the credentials to the employee's personal email (via Resend). The "work email" is admin-declared and used as the Cognito username; it is not verified as a real, deliverable address (Cognito's verification email is explicitly suppressed on creation).
 2. **Employee logs in** with their work email and the temporary password.
 3. **First-login onboarding** — Cognito returns `NEW_PASSWORD_REQUIRED`. The employee is redirected to the Onboarding page where they set a new permanent password and verify their identity using the last 4 characters of their NRIC (stored as a bcrypt hash in DynamoDB).
 4. **Subsequent logins** — The frontend calls Cognito via `amazon-cognito-identity-js`, receives an ID token, and stores it in the session.
@@ -79,17 +91,19 @@ FastAPI (AWS Elastic Beanstalk)
    - Extracts the `email` claim and looks up the employee record in DynamoDB
    - Returns `{ email, name, department, role }` — used for all downstream department scoping
 
+Because the "email" claim is not independently verified as a real address by Cognito, the system's trust boundary rests entirely on the cryptographic token verification above — not on the identifier itself being genuine.
+
 ---
 
 ## Department Scoping
 
 Every authenticated request resolves to a `department` from DynamoDB. This value is used as a partition boundary across all data layers:
 
-- **DynamoDB** — folders and documents are stored with a `department` attribute and queried by it
+- **DynamoDB** — folders, documents, and audit log entries are stored with `department` as the partition key
 - **S3** — object keys include the department prefix
 - **Pinecone** — all vectors are upserted with `department` in metadata; queries always filter `{ "department": { "$eq": department } }`
 
-An employee in `engineering` will never see, retrieve, or ask questions about documents belonging to `hr` or any other department — enforced at the API layer, not the frontend.
+An employee in `hr` will never see, retrieve, or ask questions about documents belonging to `finance` or any other department — enforced at the API layer, not the frontend.
 
 ---
 
@@ -103,12 +117,12 @@ RAG is the technique of retrieving relevant document excerpts at query time and 
 File upload
     │
     ├─ Text extraction (by file type)
-    │      PDF      → pdfplumber
-    │      DOCX     → python-docx
-    │      XLSX     → openpyxl
-    │      PPTX     → python-pptx
-    │      PNG/JPG  → pytesseract (OCR)
-    │      CSV      → stdlib csv
+    │      PDF        → pdfplumber
+    │      DOCX       → python-docx
+    │      XLSX       → openpyxl
+    │      PPTX       → python-pptx
+    │      CSV        → stdlib csv
+    │      PNG/JPG    → AWS Textract (OCR — no local OCR binary required)
     │
     ├─ Chunking
     │      500 words per chunk, 50-word overlap (sliding window)
@@ -126,18 +140,23 @@ File upload
 ```
 Employee question
     │
-    ├─ Embed question → Titan Embeddings V2 (1024-dim vector)
+    ├─ (If a conversation is already in progress) rewrite the question into a
+    │      standalone form using recent history, via Claude Haiku 4.5
+    │
+    ├─ Embed the (possibly rewritten) question → Titan Embeddings V2
     │
     ├─ Pinecone similarity search
     │      top_k = 10 chunks, filtered by department
     │
-    ├─ Build prompt
-    │      System role + instructions + document excerpts + question
+    ├─ Build grounding prompt
+    │      Instructions + retrieved document excerpts + question + conversation history
     │
     ├─ Generate answer → Claude Haiku 4.5 via AWS Bedrock
     │
     └─ Return answer with source citations to frontend
 ```
+
+A separate "Summarize" flow, triggered from a specific document, skips vector search entirely and uses that one file's full extracted text as context instead.
 
 On document deletion, all Pinecone vectors for that file are removed via a metadata filter (`file_id` + `department`). A `NotFoundError` (e.g. files uploaded before RAG was enabled) is caught and logged as a warning rather than failing the delete.
 
@@ -152,43 +171,47 @@ fyp/
 │   ├── config.py             # Env var loader (python-dotenv locally, EB env properties in prod)
 │   ├── auth.py               # Cognito JWT verifier (JWKS-based, no per-request AWS call)
 │   ├── dependencies.py       # FastAPI deps: token → employee profile
-│   ├── documents.py          # Document routes (upload, list, download, delete)
+│   ├── documents.py          # Document routes (upload, list, download, rename, move, summarize, delete)
 │   ├── folders.py            # Folder routes (create, list, rename, delete)
-│   ├── chat.py               # POST /chat — RAG query endpoint
-│   ├── rag.py                # Text extraction, chunking, Pinecone upsert/query/delete
-│   ├── bedrock_client.py     # get_embedding() + generate_response() via Bedrock
-│   ├── dynamodb_client.py    # DynamoDB operations (employees, folders, documents)
-│   ├── s3_client.py          # S3 operations
-│   ├── admin.py              # Admin routes (register, list, update dept, lock/unlock)
-│   ├── onboarding.py         # First-login NRIC verification
-│   ├── forgot_password.py    # Self-service password reset
-│   ├── profile.py            # Employee profile endpoint
-│   ├── requirements.txt      # Python dependencies
-│   └── .ebextensions/        # Elastic Beanstalk config (HTTPS, packages)
+│   ├── chat.py                # POST /chat — RAG query endpoint + chat PDF export
+│   ├── overview.py            # GET /overview — department dashboard stats
+│   ├── rag.py                 # Text extraction, chunking, Pinecone upsert/query/delete
+│   ├── bedrock_client.py      # get_embedding() + generate_response() via Bedrock
+│   ├── dynamodb_client.py     # DynamoDB operations (employees, folders, documents, audit log)
+│   ├── s3_client.py           # S3 operations
+│   ├── admin.py                # Admin routes (register, list, update dept, lock/unlock, audit log)
+│   ├── onboarding.py          # First-login NRIC verification
+│   ├── forgot_password.py     # Self-service password reset
+│   ├── profile.py             # Employee profile read/update
+│   ├── auth_routes.py         # Login event logging
+│   ├── requirements.txt       # Python dependencies
+│   └── .ebextensions/         # Elastic Beanstalk config (HTTPS, packages)
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx                        # Root router (Login / Onboarding / Dashboard)
 │   │   ├── auth/
 │   │   │   ├── AuthContext.tsx            # Auth state (tokens + employee profile)
-│   │   │   └── authClient.ts             # Cognito SDK wrappers (login, logout, session)
+│   │   │   ├── authClient.ts              # Cognito SDK wrappers (login, logout, session)
+│   │   │   └── cognitoConfig.ts           # Reads VITE_ Cognito env vars
 │   │   ├── pages/
 │   │   │   ├── LoginPage.tsx
 │   │   │   ├── OnboardingPage.tsx
-│   │   │   ├── Dashboard.tsx             # Post-login shell, view switcher
-│   │   │   ├── DocumentsPage.tsx         # File/folder browser
-│   │   │   ├── AIAssistantPage.tsx       # RAG chat UI
-│   │   │   ├── AdminDashboard.tsx        # Admin-only panel
+│   │   │   ├── Dashboard.tsx              # Post-login shell, view switcher
+│   │   │   ├── OverviewPage.tsx           # Department stats dashboard
+│   │   │   ├── DocumentsPage.tsx          # File/folder browser
+│   │   │   ├── AIAssistantPage.tsx        # RAG chat UI
+│   │   │   ├── AdminDashboard.tsx         # Admin-only panel (employees + audit log)
 │   │   │   ├── ProfilePage.tsx
 │   │   │   ├── ForgotPasswordPage.tsx
 │   │   │   └── ResetPasswordPage.tsx
 │   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── AppShell.tsx          # Main layout wrapper
-│   │   │   │   └── Sidebar.tsx           # Collapsible sidebar + mobile drawer
-│   │   │   ├── documents/               # FolderRow, FileRow, UploadZone, etc.
-│   │   │   └── ui/                      # ContextMenu, ConfirmModal, DeptBadge, etc.
-│   │   └── api/                         # Typed API call functions
+│   │   │   ├── layout/                   # AppShell, Sidebar
+│   │   │   ├── documents/                # FolderRow, FileRow, UploadZone, MoveModal, etc.
+│   │   │   ├── overview/                 # FileTypeChart (Recharts donut) and related widgets
+│   │   │   ├── admin/                    # Employee table, audit log view
+│   │   │   └── ui/                       # ContextMenu, ConfirmModal, DeptBadge, etc.
+│   │   └── api/                          # Typed API call functions (documentsApi, chatApi, adminApi, overviewApi, foldersApi, profileApi)
 │   └── package.json
 │
 └── .github/
@@ -203,13 +226,13 @@ fyp/
 ### Accounts & Services Required
 
 - **AWS account** with the following set up in `ap-southeast-2` (or your chosen region):
-  - Cognito User Pool + App Client
-  - DynamoDB tables: `Employees`, `Folders`, `Documents`
+  - Cognito User Pool + App Client (SPA-type, no client secret)
+  - DynamoDB tables: `Employees`, `Folders`, `Documents`, `AuditLog`
   - S3 bucket
   - Bedrock model access enabled for:
     - `amazon.titan-embed-text-v2:0`
-    - `anthropic.claude-haiku-4-5` (or your regional variant)
-  - IAM user with programmatic access to Cognito, DynamoDB, S3, and Bedrock
+    - Claude Haiku 4.5 (the exact model/inference-profile ID is hardcoded in `backend/config.py` — currently `au.anthropic.claude-haiku-4-5-20251001-v1:0`; update this in code if your account uses a different regional inference profile)
+  - IAM user with programmatic access to Cognito, DynamoDB, S3, Bedrock (`InvokeModel`), and **Textract** (`DetectDocumentText`) — required for OCR on image uploads
 - **Pinecone** account — create a serverless index with **1024 dimensions**, cosine metric
 - **Resend** account — for transactional email (welcome + password reset)
 
@@ -219,11 +242,8 @@ fyp/
 |---|---|
 | Python | 3.12+ |
 | Node.js | 20+ |
-| Tesseract OCR | Any recent version (for image/OCR support) |
 
-**Tesseract installation:**
-- Windows: download installer from [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki), install to `C:\Program Files\Tesseract-OCR\`
-- Linux/macOS: `sudo apt install tesseract-ocr` / `brew install tesseract`
+No local OCR installation is needed — image text extraction is handled by the AWS Textract API, not a local binary.
 
 ---
 
@@ -264,6 +284,7 @@ COGNITO_APP_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 DYNAMODB_EMPLOYEES_TABLE=Employees
 DYNAMODB_FOLDERS_TABLE=Folders
 DYNAMODB_DOCUMENTS_TABLE=Documents
+DYNAMODB_AUDIT_LOG_TABLE=AuditLog
 
 # S3
 S3_BUCKET_NAME=your-s3-bucket-name
@@ -279,6 +300,8 @@ RESEND_FROM_EMAIL=noreply@yourdomain.com
 # CORS — add your frontend origin
 ALLOWED_ORIGINS=http://localhost:5173
 ```
+
+All six of `COGNITO_USER_POOL_ID`, `COGNITO_APP_CLIENT_ID`, `S3_BUCKET_NAME`, `PINECONE_API_KEY`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL` are required — the app will refuse to start (`RuntimeError`) if any of these are missing.
 
 AWS credentials are read from the standard AWS credential chain. The easiest way locally:
 
@@ -306,9 +329,8 @@ Create a `.env` file in `frontend/`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
-VITE_COGNITO_REGION=ap-southeast-2
 VITE_COGNITO_USER_POOL_ID=ap-southeast-2_XXXXXXXXX
-VITE_COGNITO_APP_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 Start the dev server:
@@ -319,6 +341,10 @@ npm run dev
 
 The app will be available at `http://localhost:5173`.
 
+### 4. Create your first admin account
+
+Registration happens only through the Admin Panel, and the Admin Panel itself requires an existing admin account — so the very first employee must be created directly, either via the AWS Cognito console (create a user manually, then add a matching row in the `Employees` DynamoDB table with `role` set to `system_admin`) or via the AWS CLI (`aws cognito-idp admin-create-user`).
+
 ---
 
 ## DynamoDB Table Schemas
@@ -326,9 +352,9 @@ The app will be available at `http://localhost:5173`.
 ### Employees
 | Attribute | Type | Notes |
 |---|---|---|
-| `email` | String (PK) | Work email, also used as Cognito username |
+| `email` | String (PK) | Work email — really just an admin-declared identifier, also used as Cognito username |
 | `name` | String | Display name |
-| `department` | String | Lowercase, e.g. `engineering` |
+| `department` | String | Lowercase, e.g. `hr`, `finance` |
 | `role` | String | `employee` or `system_admin` |
 | `personal_email` | String | Used for welcome/reset emails |
 | `onboarding_complete` | Boolean | Set to true after first-login NRIC step |
@@ -338,20 +364,31 @@ The app will be available at `http://localhost:5173`.
 ### Folders
 | Attribute | Type | Notes |
 |---|---|---|
-| `folder_id` | String (PK) | UUID |
-| `department` | String | Partition key for queries |
+| `department` | String (PK) | Partition key — enforces department scoping |
+| `folder_id` | String (SK) | UUID |
 | `name` | String | Folder display name |
-| `created_at` | String | ISO 8601 timestamp |
+| `parent_folder_id` | String | Parent folder UUID, absent for root-level folders |
+| `created_by` / `created_at` | String | Audit fields |
 
 ### Documents
 | Attribute | Type | Notes |
 |---|---|---|
-| `file_id` | String (PK) | UUID |
-| `department` | String | Partition key for queries |
-| `folder_id` | String | Parent folder UUID |
+| `department` | String (PK) | Partition key — enforces department scoping |
+| `file_id` | String (SK) | UUID |
+| `folder_id` | String | Parent folder UUID, absent for root-level files |
 | `display_name` | String | Original filename |
-| `s3_key` | String | S3 object key |
-| `uploaded_at` | String | ISO 8601 timestamp |
+| `s3_key` | String | S3 object key (UUID-based, stable) |
+| `file_size` / `content_type` | — | File metadata |
+| `uploaded_by` / `uploaded_at` | String | Audit fields |
+
+### AuditLog
+| Attribute | Type | Notes |
+|---|---|---|
+| `department` | String (PK) | Partition key |
+| `log_id` | String (SK) | `{ISO timestamp}#{uuid}` — sortable and unique |
+| `action` | String | e.g. `document_deleted`, `employee_registered` |
+| `actor_email` | String | Who performed the action |
+| `target_type` / `target_id` / `target_name` | String | What was acted on |
 
 ---
 
@@ -362,7 +399,7 @@ Pushing to `main` with changes under `backend/` triggers the GitHub Actions work
 1. Captures the current live Elastic Beanstalk version label (for rollback)
 2. Generates the HTTPS config from a template using secrets stored in GitHub
 3. Zips the backend directory
-4. Deploys to AWS Elastic Beanstalk (`ap-southeast-2`)
+4. Deploys to AWS Elastic Beanstalk (`ap-southeast-2`) via the `beanstalk-deploy` action
 5. Automatically rolls back to the previous version if deployment fails
 
 Required GitHub Actions secrets:
@@ -382,20 +419,33 @@ Required GitHub Actions secrets:
 |---|---|---|---|
 | GET | `/health` | None | Liveness check |
 | GET | `/me` | Employee | Current employee profile |
-| POST | `/chat` | Employee | RAG question → AI answer |
-| GET | `/documents` | Employee | List documents in department |
+| POST | `/onboarding/complete` | Employee | Submit new password + NRIC on first login |
+| GET | `/profile` | Employee | Get own profile |
+| PATCH | `/profile` | Employee | Update own address/phone |
+| POST | `/auth/forgot-password/verify-email` | None | Step 1 of password reset |
+| POST | `/auth/forgot-password/send-reset` | None | Step 2 — verifies NRIC + personal email, sends reset link |
+| POST | `/auth/reset-password` | None | Complete password reset |
+| POST | `/auth/log-login` | Employee | Record a login event |
+| POST | `/chat` | Employee | RAG question (or file-grounded summarize) → AI answer |
+| POST | `/chat/export` | Employee | Export current conversation as a PDF |
+| GET | `/overview` | Employee | Department dashboard stats |
+| GET | `/documents/list` | Employee | List documents in department |
 | POST | `/documents/upload` | Employee | Upload + index a document |
-| DELETE | `/documents/{file_id}` | Employee | Delete document + vectors |
+| GET | `/documents/download/{file_id}` | Employee | Get a short-lived download URL |
+| POST | `/documents/{file_id}/summarize` | Employee | Summarize a specific document |
+| PATCH | `/documents/{file_id}/rename` | Employee | Rename a document |
+| POST | `/documents/move` | Employee | Move a batch of files/folders to a new destination |
+| DELETE | `/documents/{file_id}` | Employee | Delete document + its vectors |
 | GET | `/folders` | Employee | List folders in department |
 | POST | `/folders` | Employee | Create folder |
-| PATCH | `/folders/{folder_id}` | Employee | Rename folder |
-| DELETE | `/folders/{folder_id}` | Employee | Delete folder |
-| POST | `/onboarding/complete` | Employee | Submit NRIC on first login |
+| PATCH | `/folders/{folder_id}/rename` | Employee | Rename folder |
+| DELETE | `/folders/{folder_id}` | Employee | Delete folder (cascades to nested folders/files) |
 | POST | `/admin/register` | Admin | Register new employee |
 | GET | `/admin/employees` | Admin | List all employees |
 | PUT | `/admin/employees/{email}` | Admin | Update employee department |
 | POST | `/admin/employees/{email}/lock` | Admin | Lock account |
 | POST | `/admin/employees/{email}/unlock` | Admin | Unlock account |
+| GET | `/admin/audit-log` | Admin | Filterable audit log (by department, action type) |
 
 ---
 
