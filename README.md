@@ -42,10 +42,18 @@ A department-scoped cloud document management system built as a Final Year Proje
 ---
 <p>Login Page</p>
 <img width="543" height="632" alt="image" src="https://github.com/user-attachments/assets/51da138a-ef36-4724-a697-29b32629d822" />
-<p>Dashboard</p>
+<p>Overview Page</p>
+<img width="1919" height="909" alt="image" src="https://github.com/user-attachments/assets/d89373e7-7eed-4c95-b9d2-c255aa1a70a1" />
+<p>Dashboard Page</p>
 <img width="2559" height="595" alt="Dashboard FYP SS" src="https://github.com/user-attachments/assets/f678d216-ae0b-4f6b-b2aa-6d891c235b95" />
-<p>AI Assisstant</p>
+<p>AI Assisstant Page</p>
 <img width="2559" height="838" alt="AI Assistant FYP SS" src="https://github.com/user-attachments/assets/b9f434d3-2909-4b11-8d99-4c0dbb42e48e" />
+<p>My Profile Page</p>
+<img width="1919" height="912" alt="image" src="https://github.com/user-attachments/assets/3c355998-3113-4aeb-b9e8-63d383fc63b7" />
+<p>Admin Dashboard Employees Page</p>
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/60ea78f4-f381-4a6b-9cd6-0fe4bccf00b9" />
+<p>Admin Dashboard Audit Log Page</p>
+<img width="1919" height="907" alt="image" src="https://github.com/user-attachments/assets/28305114-cf48-4af4-a637-330f40ae06e5" />
 
 ---
 
